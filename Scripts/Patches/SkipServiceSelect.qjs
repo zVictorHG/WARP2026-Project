@@ -22,9 +22,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shinryo, Neo-Mind                                      *
+*   Author(s)     : Shinryo, Neo-Mind, Victor Hugo                         *
 *   Created Date  : 2020-11-10                                             *
-*   Last Modified : 2023-08-26                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -41,7 +41,44 @@ SkipServiceSelect = function(_)
         straddr = Exe.FindText("extendedslot");
 
     if (straddr < 0)
-        throw Error("Could not find 'passwordencrypt' or 'extendedslot' string");
+    {
+        $$(tag + "Fallback to the 2026 CLoginMode::OnChangeState switch");
+
+        const code2026 =
+            `83 F8 26`
+        +   ` 0F 87 ?? ?? ?? ??`
+        +   ` 0F B6 80 ?? ?? ?? ??`
+        +   ` FF 24 85 ?? ?? ?? ??`;
+
+        const selectCode2026 =
+            `E8 ?? ?? ?? ??`
+        +   ` 6A 01`
+        +   ` 8B C8`
+        +   ` E8 ?? ?? ?? ??`
+        +   ` FF 35 ?? ?? ?? ??`
+        +   ` 8D B7 E4 6E 00 00`
+        +   ` 8B CE`
+        +   ` E8 ?? ?? ?? ??`;
+
+        const selectAddr = Exe.FindHex(selectCode2026);
+        const selectVir = selectAddr > 0 ? Exe.Phy2Vir(selectAddr, CODE) : 0;
+        if (selectAddr < 0)
+            throw Error("Could not find 'passwordencrypt' or 'extendedslot' string");
+
+        const stateSwitchAddr = Exe.FindHex(code2026, selectAddr - 0x1000, selectAddr);
+        if (stateSwitchAddr < 0)
+            throw Error("Could not find 2026 CLoginMode::OnChangeState switch");
+
+        $$(tag + "Route Service Select state directly to Login state");
+        const stateIdxTbl = Exe.GetUint32(stateSwitchAddr + 12);
+        const stateIdxTblPhy = Exe.Vir2Phy(stateIdxTbl, CODE);
+        if (stateIdxTblPhy < 0)
+            throw Error("Could not resolve 2026 CLoginMode::OnChangeState index table");
+
+        Exe.SetUint8(stateIdxTblPhy + 2, 3);
+
+        return true;
+    }
 
     $$(tag + "Found string at 0x" + straddr.toString(16));
 

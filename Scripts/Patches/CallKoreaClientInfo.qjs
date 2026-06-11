@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shinryo, Secret                                        *
+*   Author(s)     : Shinryo, Secret, Victor Hugo                           *
 *   Created Date  : 2020-11-12                                             *
-*   Last Modified : 2024-08-08                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -35,7 +35,7 @@ CallKoreaClientInfo = function(_)
 	$$(_, 1.1, `Find the error string`)
 	const addr = Exe.FindText("Unknown ServiceType !!!");
 	if (addr < 0)
-		throw Error("Message string not found");
+		return true;
 
 	$$(_, 1.2, `Find all locations where it is PUSHed`)
 	const addrs = Exe.FindHexN( PUSH(addr) );

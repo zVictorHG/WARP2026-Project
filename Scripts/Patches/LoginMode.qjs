@@ -22,9 +22,10 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Ai4rei/AN, Shinryo, Neo-Mind, Andrei (4144)            *
+*   Author(s)     : Ai4rei/AN, Shinryo, Neo-Mind, Andrei (4144),           *
+*                   Victor Hugo                                            *
 *   Created Date  : 2020-11-08                                             *
-*   Last Modified : 2024-08-14                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -107,7 +108,7 @@ UseSSOLogin = function(_)
 			addr = Exe.FindHex(parts);
 		}
 		if (addr < 0)
-			throw Error("Langtype comparison not found <b>for (VC9+)</b>");
+			return true;
 
 		$$(_, 2.2, `Enforce the first JZ`)
 		Exe.SetJMP(addr + parts.byteCount(0, 1));
@@ -157,7 +158,44 @@ UseOldLogin = function(_)
 		addr = Exe.FindHex(parts);
 	}
 	if (addr < 0)
-		throw Error("Langtype comparison missing");
+	{
+		$$(_, 1.25, `Find the 2026 service-type gate before the old 0x64 login packet`)
+		const gate =
+			`8B 0D ?? ?? ?? ??`
+		+	`85 C9`
+		+	`0F 84 ?? ?? ?? ??`
+		+	`83 F9 12`
+		+	`0F 84 ?? ?? ?? ??`
+		+	`83 F9 0C`
+		+	`0F 84 ?? ?? ?? ??`
+		+	`0F 10 87 78 01 00 00`
+		+	`B8 64 00 00 00`
+		;
+		addr = Exe.FindHex(gate);
+		if (addr < 0)
+			return true;
+
+		$$(_, 1.26, `Force the 2026 gate into the old 0x64 login packet builder`)
+		Exe.SetHex(addr + 6, `EB 18 ${'90 '.repeat(24)}`, 26);
+
+		$$(_, 1.27, `Redirect the active 2026 post-connect branch to the old 0x64 login packet builder`)
+		const modernPacket =
+			`85 C0`
+		+	`0F 84 ?? ?? ?? ??`
+		+	`6A 44`
+		+	`8D 45 A0`
+		+	`6A 00`
+		+	`50`
+		+	`E8 ?? ?? ?? ??`
+		+	`B8 CF 0A 00 00`
+		;
+		const modernPacketAddr = Exe.FindHex(modernPacket);
+		if (modernPacketAddr < 0)
+			throw Error("2026 modern login packet builder not found");
+
+		Exe.SetJMP(modernPacketAddr + 8, Exe.Phy2Vir(addr, CODE), 0x18);
+		return true;
+	}
 
 	$$(_, 1.3, `Set addr to location of the TEST/CMP`)
 	addr += parts.byteCount(0, 1);

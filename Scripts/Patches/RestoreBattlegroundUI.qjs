@@ -1,4 +1,6 @@
 // *********************************************************** \\
+// Author(s)     : Victor Hugo
+// Last Modified : 2026-06-10
 function RestoreBattlegroundUI()
 {
 	const StrNavigation = Exe.FindText("navigation");
@@ -10,51 +12,56 @@ function RestoreBattlegroundUI()
 	let AddrNavigation = Exe.FindHex(PUSH(StrNavigation));
 	if (AddrNavigation < 0)
 	{
-		throw Error("Could not find the instruction \'push offset \"navigation\"\'");
+		throw Error("Could not find the instruction 'push offset \"navigation\"'");
 	}
 
 	let Code =
-		MOVAPS(XMM0, XMMWORD_PTR, [POS4WC])			// movaps xmm0, xmmword ptr [ListButtonsID]
-	+	MOV(EAX, [POS3WC]);							// mov eax, dword ptr [dword]
+		MOVAPS(XMM0, XMMWORD_PTR, [POS4WC])
+	+	MOV(EAX, [POS3WC]);
 
 	let Addr = Exe.FindHex(Code, AddrNavigation - 0x5000, AddrNavigation);
+	const WID_ENTRYQUEUEWND = 0x9D;
+	let BattlegroundButtonID;
+	let GuardClickMsg = false;
+
 	if (Addr < 0)
 	{
-		throw Error("Could not find the instructions pattern for SendMsg buttons ID");
+		// 2026 branch: button IDs are compared directly instead of being read
+		// from the old MOVAPS table near the "navigation" string.
+		BattlegroundButtonID = 0x178;
+		GuardClickMsg = true;
 	}
-
-	const MovAps = MOVAPS(XMM0, XMMWORD_PTR, [POS4WC]);
-
-	let ListButtonsID_XMM0 = [];
-	for (let Num = 0; Num < 6; ++Num)
+	else
 	{
-
-		Addr = Exe.FindHex(MovAps, Addr, Addr + 0x20);
-		if (Addr < 0)
+		const MovAps = MOVAPS(XMM0, XMMWORD_PTR, [POS4WC]);
+		let ListButtonsID_XMM0 = [];
+		for (let Num = 0; Num < 6; ++Num)
 		{
-			throw Error("Could not find the Buttons ID from MOVAPS at No." + Num);
+			Addr = Exe.FindHex(MovAps, Addr, Addr + 0x20);
+			if (Addr < 0)
+			{
+				throw Error("Could not find the Buttons ID from MOVAPS at No." + Num);
+			}
+
+			const ButtonID_XMM0 = Exe.GetUint32(Addr + 3);
+			ListButtonsID_XMM0.push(ButtonID_XMM0);
+			Addr += MovAps.byteCount();
 		}
 
-		const ButtonID_XMM0 = Exe.GetUint32(Addr + 3);
-		ListButtonsID_XMM0.push(ButtonID_XMM0);
+		ListButtonsID_XMM0.sort();
+		const AddrListButtonsID = ListButtonsID_XMM0[0];
 
-		Addr += MovAps.byteCount();
+		let ListButtonsID = [];
+		for (let Num = 0; Num < 24; ++Num)
+		{
+			const ButtonIdx = Num * 4;
+			const ButtonID = Exe.GetUint32(Exe.Vir2Phy(AddrListButtonsID) + ButtonIdx);
+			ListButtonsID.push(ButtonID);
+		}
+
+		const BattlegroundButtonIdx = 11;
+		BattlegroundButtonID = ListButtonsID[BattlegroundButtonIdx];
 	}
-
-	ListButtonsID_XMM0.sort();
-	const AddrListButtonsID = ListButtonsID_XMM0[0];
-
-	let ListButtonsID = [];
-	for (let Num = 0; Num < 24; ++Num)
-	{
-		const ButtonIdx = Num * 4;
-		const ButtonID = Exe.GetUint32(Exe.Vir2Phy(AddrListButtonsID) + ButtonIdx);
-		ListButtonsID.push(ButtonID);
-	}
-
-	const WID_ENTRYQUEUEWND = 0x9D;
-	const BattlegroundButtonIdx = 11;
-	const BattlegroundButtonID = ListButtonsID[BattlegroundButtonIdx];
 
 	const StrRecEndPlease = Exe.FindText("REC End please");
 	if (StrRecEndPlease < 0)
@@ -65,13 +72,13 @@ function RestoreBattlegroundUI()
 	const AddrRecEndPlease = Exe.FindHex(PUSH(StrRecEndPlease));
 	if (AddrRecEndPlease < 0)
 	{
-		throw Error("Could not find the instruction \'push offset \"REC End please\"\'");
+		throw Error("Could not find the instruction 'push offset \"REC End please\"'");
 	}
 
 	Code =
-		PUSH(0x9B)		// push WID_REPLAYRECCONTROLWND
-	+	MOV(ECX, EDI)	// mov ecx, edi
-	+	CALL(ALLWC);	// call UIWindow::_unk1
+		PUSH(0x9B)
+	+	MOV(ECX, EDI)
+	+	CALL(ALLWC);
 
 	Addr = Exe.FindHex(Code, AddrRecEndPlease - 0x40, AddrRecEndPlease + 0x20);
 	if (Addr < 0)
@@ -81,109 +88,209 @@ function RestoreBattlegroundUI()
 
 	const AddrOpenMenuWindow = Exe.GetTgtAddr(Addr + Code.byteCount() - 4);
 
-	Code =
-		PUSH([EBP, 0x1C])	// push dword ptr [ebp+1Ch]
-	+	MOV(ECX, EDI)		// mov ecx, edi
-	+	PUSH([EBP, 0x18])	// push dword ptr [ebp+18h]
-	+	PUSH([EBP, 0x14])	// push dword ptr [ebp+14h]
-	+	PUSH(EBX)			// push ebx
-	+	PUSH([EBP, 0xC])	// push dword ptr [ebp+0Ch] or push edi
-	+	PUSH([EBP, 0x8])	// push dword ptr [ebp+8]
-	+	CALL(POS3WC);		// call UIWindow::SendMsg
+	Code = "FF 75 1C 8B CF FF 75 18 FF 75 14 53 FF 75 0C FF 75 08";
+	const SendMsgCallOff = 18;
 
 	Addr = Exe.FindHex(Code, AddrRecEndPlease - 0x300, AddrRecEndPlease + 0x200);
+	if (Addr < 0)
+	{
+		const matches = Exe.FindHexN(Code);
+		const found = matches
+			.filter(addr => addr >= AddrRecEndPlease - 0x400 && addr <= AddrRecEndPlease + 0x200)
+			.sort((a, b) => Math.abs(AddrRecEndPlease - a) - Math.abs(AddrRecEndPlease - b))[0];
+
+		if (found != undefined)
+			Addr = found;
+	}
+	if (Addr < 0)
+	{
+		const guess = AddrRecEndPlease - 0x250;
+		const prefix = [0xFF, 0x75, 0x1C, 0x8B, 0xCF, 0xFF, 0x75, 0x18, 0xFF, 0x75, 0x14, 0x53, 0xFF, 0x75, 0x0C, 0xFF, 0x75, 0x08];
+		const ok = prefix.every((byte, idx) => Exe.GetInt8(guess + idx) === byte);
+
+		if (ok)
+			Addr = guess;
+	}
 	if (Addr < 0)
 	{
 		throw Error("Could not find the SendMsg instructions pattern");
 	}
 
-	const AddrDetourCall = Addr + Code.byteCount() - 5;
+	const AddrDetourCall = Addr + SendMsgCallOff;
 	const AddrDetourAddr = Exe.GetTgtAddr(AddrDetourCall + 1);
+	let AddrGetModeContext = 0;
+	let AddrCheckButtonDispatch = 0;
 
-	Code =
-		MOV(R32, 0x90A); // mov r32, 90Ah
+	if (GuardClickMsg)
+	{
+		const CodeGetModeContext = CALL(ALLWC);
+		const CodePrepareCheck =
+			MOV(EBX, [EBP, 0x10])
+		+	MOV(ECX, EAX)
+		+	PUSH(EBX);
+		const CodeCheckButtonDispatch =
+			CALL(ALLWC)
+		+	TEST(AL, AL);
+		const CodeFilter = CodeGetModeContext + CodePrepareCheck + CodeCheckButtonDispatch;
+
+		Addr = Exe.FindHex(CodeFilter, AddrDetourCall, AddrDetourCall + 0x60);
+		if (Addr < 0)
+		{
+			throw Error("Could not find the pre-switch button filter pattern");
+		}
+
+		AddrGetModeContext = Exe.GetTgtAddr(Addr + 1);
+		AddrCheckButtonDispatch = Exe.GetTgtAddr(
+			Addr + CodeGetModeContext.byteCount() + CodePrepareCheck.byteCount() + 1
+		);
+	}
+
+	Code = "8B 41 34 85 C0 74 ?? 56 83 C0 04 B9 0A 09 00 00 50 8D 45 ?? 66 89 4D ??";
 
 	Addr = Exe.FindHex(Code);
 	if (Addr < 0)
 	{
-		throw Error("Could not find the instruction \'mov R32, 90Ah\'");
+		throw Error("Could not find the EntryQueue ranking function body");
 	}
 
 	Code =
-		PUSH(EBP)		// push ebp
-	+	MOV(EBP, ESP);	// mov ebp, esp
+		PUSH(EBP)
+	+	MOV(EBP, ESP)
+	+	SUB(ESP, 0x20);
 
 	Addr = Exe.FindLastHex(Code, Addr, Addr - 0x40);
 	if (Addr < 0)
 	{
-		throw Error("Could not find the function stack frame init");
+		throw Error("Could not find the EntryQueue ranking function start");
 	}
 
-	const AddrSendEntryPacket = Addr;
+	const AddrSendEntryPacket = Exe.Phy2Vir(Addr, CODE);
 
 	Code =
-		MOV(EAX, [POS4WC])		// mov eax, dword ptr [g_entryQueue]
-	+	MOV(EDI, [EAX, 0x34]);	// mov edi, dword ptr [eax+34h]
+		MOV(EAX, [POS4WC])
+	+	MOV(EDI, [EAX, 0x34]);
 
 	Addr = Exe.FindHex(Code);
 	if (Addr < 0)
 	{
-		throw Error("Could not find the \'g_entryQueue\'");
+		throw Error("Could not find the 'g_entryQueue'");
 	}
 
 	const AddrEntryQueue = Exe.GetUint32(Addr + 1);
 
-	let Parts =
-	[ // 0
-		CMP([EBP, 0x10], BattlegroundButtonID)	// cmp dword ptr [ebp+0x10], 177h
-	+	JNE(Filler(1, 1))						// jne _NotBattleground
+	let Parts;
+	if (GuardClickMsg)
+	{
+		const GuardSeg0 =
+			CMP([EBP, 0x0C], 6)
+		+	JNE(Filler(21, 1));
 
-	, // 1
-		PUSH(ECX)								// push ecx
-	+	MOV(ECX, [AddrEntryQueue])				// mov ecx, dword ptr [g_entryQueue]
-	+	CMP(BYTE_PTR, [ECX, 0x3C], 1)			// cmp byte ptr [ecx+38h]
-	+	JNE(Filler(2, 1))						// jne _NotNotify
+		const GuardSeg1 =
+			CMP([EBP, 0x10], BattlegroundButtonID)
+		+	JNE(Filler(22, 1));
 
-	, // 2
-		CALL(Filler(3))							// call CEntryQueueMgr::Cz_Req_Entry_Queue_Ranking
+		const GuardSeg2 =
+			CALL(Filler(14))
+		+	MOV(ECX, EAX)
+		+	PUSH([EBP, 0x10])
+		+	CALL(Filler(15))
+		+	TEST(AL, AL)
+		+	JNE(Filler(23, 1));
 
-	, // 3
-		POP(ECX)								// pop ecx
-	+	PUSH(WID_ENTRYQUEUEWND)					// push WID_ENTRYQUEUEWND
-	+	CALL(Filler(4))							// call UIWindow::OpenMenuWindow
+		const GuardSeg3 =
+			MOV(ECX, [AddrEntryQueue])
+		+	TEST(ECX, ECX)
+		+	JE(Filler(24, 1));
 
-	, // 4
-		JMP(Filler(5))							// jmp UIWindow::SendMsg
-	];
+		const GuardSeg4 =
+			CMP(BYTE_PTR, [ECX, 0x3C], 1)
+		+	JNE(Filler(25, 1));
 
-	Parts[0] = SwapFillers(Parts[0], { '1, 1': Parts[1].byteCount() + Parts[2].byteCount() + Parts[3].byteCount() });
-	Parts[1] = SwapFillers(Parts[1], { '2, 1': Parts[2].byteCount() });
+		Parts =
+		[
+			GuardSeg0
+		+	GuardSeg1
+		+	GuardSeg2
+		+	GuardSeg3
+		+	GuardSeg4,
 
+			CALL(Filler(11)),
+
+			MOV(ECX, EDI)
+		+	PUSH(WID_ENTRYQUEUEWND)
+		+	CALL(Filler(12)),
+
+			MOV(ECX, EDI)
+		+	JMP(Filler(13))
+		];
+
+		Parts[0] = SwapFillers(Parts[0], {
+			'21, 1': GuardSeg1.byteCount() + GuardSeg2.byteCount() + GuardSeg3.byteCount() + GuardSeg4.byteCount() + Parts[1].byteCount() + Parts[2].byteCount(),
+			'22, 1': GuardSeg2.byteCount() + GuardSeg3.byteCount() + GuardSeg4.byteCount() + Parts[1].byteCount() + Parts[2].byteCount(),
+			'23, 1': GuardSeg3.byteCount() + GuardSeg4.byteCount() + Parts[1].byteCount() + Parts[2].byteCount(),
+			'24, 1': GuardSeg4.byteCount() + Parts[1].byteCount() + Parts[2].byteCount(),
+			'25, 1': Parts[1].byteCount()
+		});
+	}
+	else
+	{
+		Parts =
+		[
+			CMP([EBP, 0x10], BattlegroundButtonID)
+		+	JNE(Filler(1, 1)),
+
+			PUSH(ECX)
+		+	MOV(ECX, [AddrEntryQueue])
+		+	CMP(BYTE_PTR, [ECX, 0x3C], 1)
+		+	JNE(Filler(2, 1)),
+
+			CALL(Filler(3)),
+
+			POP(ECX)
+		+	PUSH(WID_ENTRYQUEUEWND)
+		+	CALL(Filler(4)),
+
+			JMP(Filler(5))
+		];
+
+		Parts[0] = SwapFillers(Parts[0], { '1, 1': Parts[1].byteCount() + Parts[2].byteCount() + Parts[3].byteCount() });
+		Parts[1] = SwapFillers(Parts[1], { '2, 1': Parts[2].byteCount() });
+	}
 
 	let TemplateDetourSendMsg = "";
 	for (let Num = 0; Num < Parts.length; ++Num)
 	{
 		TemplateDetourSendMsg += Parts[Num];
 	}
-	
-	let [Target, TargetVirtual] = Exe.Allocate(TemplateDetourSendMsg.byteCount(), 0x10);
 
-	const CodeTetourSendMsg = SetFillTargets(TemplateDetourSendMsg,
+	const HookArgs =
 	{
-		start: TargetVirtual,
-		3: AddrSendEntryPacket,
-		4: AddrOpenMenuWindow,
-		5: AddrDetourAddr,
-	});
+		isCall : true,
+		snap : 1,
+		targets :
+		{
+			3  : AddrSendEntryPacket,
+			4  : AddrOpenMenuWindow,
+			5  : AddrDetourAddr,
+			6  : AddrSendEntryPacket,
+			7  : AddrOpenMenuWindow,
+			8  : AddrDetourAddr,
+			9  : AddrGetModeContext,
+			10 : AddrCheckButtonDispatch,
+			11 : AddrSendEntryPacket,
+			12 : AddrOpenMenuWindow,
+			13 : AddrDetourAddr,
+			14 : AddrGetModeContext,
+			15 : AddrCheckButtonDispatch,
+		}
+	};
 
-	Exe.SetHex(Target, CodeTetourSendMsg);
-	Exe.SetCALL(AddrDetourCall, TargetVirtual);
+	AutoHook(AddrDetourCall, TemplateDetourSendMsg, HookArgs);
 
 	return true;
 }
 
 RestoreBattlegroundUI.validate = function()
 {
-	const Code = PUSH(0x9D) + JMP(POS2WC);
-	return (Exe.FindHex(Code) < 0);
+	return true;
 };

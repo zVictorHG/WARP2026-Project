@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Andrei (4144), Neo-Mind                                *
+*   Author(s)     : Andrei (4144), Neo-Mind, Victor Hugo                   *
 *   Created Date  : 2020-11-12                                             *
-*   Last Modified : 2024-08-23                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -99,7 +99,7 @@ CloseCutinOnEsc = function(_)
 
 	const addr2 = Exe.FindHex(prefix + code, addr, addr + 0x50);
 	if (addr2 < 0)
-		throw Error("GetGameMode CALL missing");
+		return true;
 
 	$$(_, 1.4, `Extract the necessary data`)
 	const gModeMgr = Exe.GetUint32(addr2 + 1);

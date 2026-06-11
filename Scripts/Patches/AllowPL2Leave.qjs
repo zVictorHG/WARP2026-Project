@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Andrei (4144), Neo-Mind                                *
+*   Author(s)     : Andrei (4144), Neo-Mind, Victor Hugo                   *
 *   Created Date  : 2020-11-21                                             *
-*   Last Modified : 2024-08-08                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -46,7 +46,11 @@ AllowPL2Leave = function(_)
 	+	JMP()        //jmp _next
 	;
 
-	const refAddr = Exe.FindHex(code);
+	let refAddr = Exe.FindHex(code);
+	if (refAddr < 0)
+	{
+		refAddr = Exe.FindHex("80 BD ?? ?? ?? ?? 00 6A 00 74 ?? 6A 00 6A 00 68 FF 00 00 00 68 C9 0C 00 00 E9");
+	}
 	if (refAddr < 0)
 		throw Error("Reference pattern missing");
 
@@ -64,6 +68,16 @@ AllowPL2Leave = function(_)
 	+	CALL(ALLWC)               //call FRIEND_INFO_destructor
 	;
 	const addr = Exe.FindHex(code, refAddr - 0x40, refAddr);
+	if (addr < 0)
+	{
+		const addr = Exe.FindLastHex(TEST(AL, AL) + JNZ(WCp), refAddr, refAddr - 0x80);
+		if (addr > 0)
+		{
+			$$(_, 2, `Enforce the Jump`)
+			Exe.SetJMP(addr + 2);
+			return true;
+		}
+	}
 	if (addr < 0)
 		throw Error("JZ/JNZ Pattern not found");
 

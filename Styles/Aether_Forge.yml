@@ -1,0 +1,118 @@
+############################################################################
+#                                                                          #
+#   Aether Forge style for WARP                                             #
+#                                                                          #
+#   Author(s)     : Victor Hugo                                             #
+#   Created Date  : 2026-06-11                                             #
+#   Last Modified : 2026-06-11                                             #
+#                                                                          #
+############################################################################
+
+radius: 8
+
+font:
+    family: Nova Flat
+    size: 9
+    sizeBig: 12
+    sizeSmall: 8
+    editFamily: Cambria
+    editSize: 10
+
+colors:
+    global:
+        background: '#EDF1F6'
+        overlay: '#801C2533'
+        border: '#9AA8BA'
+
+        primary: '#18304A'
+        secondary: '#2A5D79'
+        accent: '#008F83'
+        highlight: '#FFFFFF'
+
+        rejector: '#D94A5F'
+
+    dropDown:
+        background: '#F8FAFD'
+        border: '#93A4B8'
+
+    page:
+        background: '#F6F8FB'
+        border: '#A6B4C5'
+
+    editor:
+        background: '#FFFFFF'
+
+    actionFrame:
+        border: transparent
+
+    demoText:
+        inactiveText: '#008F83'
+        activeText: '#18304A'
+
+    idxPrompt:
+        color: '#008F83'
+
+    delegate:
+        text: '#18304A'
+        groupText: '#008F83'
+        selectedText: '#FFFFFF'
+        background: '#E3E9F1'
+        selectedBG: '#008F83'
+        menuText: '#2A5D79'
+        linkText: '#315EB5'
+        selectedLinkText: '#FFFFFF'
+
+    dialog:
+        acceptor: '#008F83'
+        rejector: '#D94A5F'
+
+    errBox:
+        border: '#D94A5F'
+
+    warnBox:
+        border: '#D9822B'
+
+    successBox:
+        border: '#008F83'
+
+    queryBox:
+        border: '#2A5D79'
+
+    aboutBox:
+        border: '#2A5D79'
+
+    settingsBox:
+        border: '#008F83'
+        headerText: '#18304A'
+
+    matches:
+        background: '#D5DEE8'
+        text: '#18304A'
+        currentBG: '#008F83'
+        currentText: '#FFFFFF'
+
+    outputView:
+        success: '#008F83'
+        info: '#2A5D79'
+        error: '#D94A5F'
+        warn: '#D9822B'
+
+        patInfo: '#315EB5'
+        extnInfo: '#315EB5'
+        exeInfo: '#7C4DB7'
+        patIgnored: '#7C4DB7'
+        extnOutput: '#7C4DB7'
+        userInterrupt: '#D94A5F'
+
+    syntax:
+        comment: '#6C7888'
+        docComment: '#008F83'
+        number: '#B15D12'
+        string: '#26733D'
+        escSequence: '#A83C7A'
+        regexp: '#7C4DB7'
+        operator: '#18304A'
+        keyword: '#315EB5'
+        globVal: '#008F83'
+        member: '#A83C7A'
+        invalid: '#D94A5F'

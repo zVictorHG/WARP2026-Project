@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shinryo, Neo-Mind                                      *
+*   Author(s)     : Shinryo, Neo-Mind, Victor Hugo                         *
 *   Created Date  : 2020-11-07                                             *
-*   Last Modified : 2024-08-14                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -113,6 +113,11 @@ MultiGRFs = function(_)
 		;
 		callAddr = Exe.FindHex(code, addr + 5, addr + 40);
 	}
+	if (callAddr < 0 && Exe.GetHex(addr + 1, 1).trim() === "B9")
+	{
+		code = CALL(ALLWC);         //call CFileMgr::AddPak
+		callAddr = Exe.FindHex(code, addr + 5, addr + 12);
+	}
 	if (callAddr < 0)
 		throw Error("AddPak call not found");
 
@@ -120,7 +125,10 @@ MultiGRFs = function(_)
 	const AddPak = Exe.GetTgtAddr(callAddr + 1);
 	
 	$$(_, 2.3, `Little trick to avoid changing 10 bytes (change the push to MOV ECX, addr)`)
-	Exe.SetUint8(addr, 0xB9);
+	if (Exe.GetHex(addr + 1, 1).trim() === "B9")
+		Exe.SetUint8(addr, 0x90);
+	else
+		Exe.SetUint8(addr, 0xB9);
 
 	$$(_, 3.1, `Run one of the helper functions below based on the patch name`)
 	///       Helper functions were made for better readability.

@@ -278,12 +278,6 @@ CustomUI:
             author: Skylove
             desc: Disables Doram race selection in the character creation window.
 
-        - HideProbabilityUI:
-            title : Hide Probability UI
-            recommend : no
-            author : Skylove
-            desc: Hides the item probability window, preventing probability details from being displayed in the UI.
-
         - FixSelectMenuReset:
             title : Fix NPC dialogue Select Menu Reset
             recommend : no

@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2021-08-20                                             *
-*   Last Modified : 2024-08-01                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -101,26 +101,48 @@ export function load()
 
 	$$(_, 1.4, `Find the string 'NUMACCOUNT'`)
 	let addr = Exe.FindText("NUMACCOUNT");
-	if (addr < 0)
-		throw Log.rise(ErrMsg = new Error(`${self} - 'NUMACCOUNT' not found`));
-
-	$$(_, 1.5, `Find where it is PUSHed`)
-	let code =
-		MOV(ECX, POS4WC) //mov ecx, <g_windowMgr>
-	+	CALL(NEG3WC)     //call UIWindowMgr::MakeWindow
-	+	PUSH_0           //push 0
-	+	PUSH_0           //push 0
-	+	PUSH(addr)       //push offset "NUMACCOUNT"
-	;
-
-	addr = Exe.FindHex(code);
-	if (addr < 0)
+	let code = '';
+	if (addr >= 0)
 	{
-		code = code.replace(PUSH_0, PUSH_0 + MOV(R32, R32)); //mov regA, regB follows the first 'push 0'
+		$$(_, 1.5, `Find where it is PUSHed`)
+		code =
+			MOV(ECX, POS4WC) //mov ecx, <g_windowMgr>
+		+	CALL(NEG3WC)     //call UIWindowMgr::MakeWindow
+		+	PUSH_0           //push 0
+		+	PUSH_0           //push 0
+		+	PUSH(addr)       //push offset "NUMACCOUNT"
+		;
+
 		addr = Exe.FindHex(code);
+		if (addr < 0)
+		{
+			code = code.replace(PUSH_0, PUSH_0 + MOV(R32, R32)); //mov regA, regB follows the first 'push 0'
+			addr = Exe.FindHex(code);
+		}
 	}
 	if (addr < 0)
-		throw Log.rise(ErrMsg = new Error(`${self} - 'NUMACCOUNT' not used`));
+	{
+		$$(_, 1.6, `Find UIWindowMgr::MakeWindow from the always-present 0xB5 window creation`)
+		code =
+			JE(0x0F)
+		+	PUSH(0xB5)
+		+	MOV(ECX, POS4WC)
+		+	CALL()
+		;
+
+		addr = Exe.FindHex(code);
+		if (addr < 0)
+			throw Log.rise(ErrMsg = new Error(`${self} - 'NUMACCOUNT' not used`));
+
+		$$(_, 2.1, `Extract the g_windowMgr address, compute MOV instruction & CALL function address`)
+		Value   = Exe.GetUint32(addr + 8);
+		Hex     = Value.toHex(4);
+		MovECX  = ' B9' + Hex;
+		MakeWin = Exe.GetTgtAddr(addr + 13);
+
+		$$(_, 2.2, `Set [Valid] to true`)
+		return Log.rise(Valid = true);
+	}
 
 	$$(_, 2.1, `Extract the g_windowMgr address, compute MOV instruction & CALL function address`)
 	Value   = Exe.GetUint32(addr + 1);

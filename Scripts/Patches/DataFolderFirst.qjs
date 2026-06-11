@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shinryo                                                *
+*   Author(s)     : Shinryo, Skylove, Victor Hugo                          *
 *   Created Date  : 2020-11-12                                             *
-*   Last Modified : 2024-08-08                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -32,18 +32,40 @@
 ///
 DataFolderFirst = function(_)
 {
-	if (Exe.BuildDate >= 20250300) {
-		$$(_, 0.1, `Find the new DataFolderFirst pattern (2025+)`)
+	if (Exe.BuildDate >= 20250300)
+	{
+		$$(_, 0.1, `Find the new DataFolderFirst call-swap pattern (2025+)`)
+		let p2025Swap =
+			"53 56 57 51 FF 75 0C FF 75 08 E8 ?? ?? ?? ?? "
+		+	"59 85 C0 75 0B FF 75 0C FF 75 08 E8 ?? ?? ?? ?? "
+		+	"5F 5E 5B 89 EC 5D C2 0C 00";
+		let a2025Swap = Exe.FindHex(p2025Swap);
+		if (a2025Swap >= 0)
+		{
+			const firstCall = a2025Swap + 0x0A;
+			const secondCall = a2025Swap + 0x1A;
+			const firstTarget = Exe.GetTgtAddr(firstCall + 1);
+			const secondTarget = Exe.GetTgtAddr(secondCall + 1);
+			if (firstTarget < 0 || secondTarget < 0)
+				throw Error("Could not resolve the 2025+ DataFolderFirst call targets");
+
+			$$(_, 0.2, `Swap the two helper calls so data folder is read first`)
+			Exe.SetCALL(firstCall, secondTarget);
+			Exe.SetCALL(secondCall, firstTarget);
+			return true;
+		}
+
+		$$(_, 0.3, `Fallback to the older 2025+ JZ pattern if the call-swap pattern is absent`)
 		let p2025 = "0F 84 ?? ?? ?? ?? 6A 00 68 80 00 00 00 6A 03 6A 00 6A 01 68 00 00 00 80 FF 75 08 FF 15 ?? ?? ?? ?? 8B 5D 0C 8B F8 83 FF FF";
 		let a2025 = Exe.FindHex(p2025);
 		if (a2025 < 0)
 			throw Error("New DataFolderFirst pattern not found (2025+)");
-		$$(_, 0.2, `NOP out the JZ near (0F 84 ...)`)
-		Exe.SetNOPs(a2025, 6); // 0F 84 xx xx xx xx ¡æ 90 90 90 90 90 90
+
+		$$(_, 0.4, `NOP out the JZ near (0F 84 ...)`)
+		Exe.SetNOPs(a2025, 6);
 		return true;
 	}
-
-	$$(_, 1.1, `Find the string 'loading'`)
+$$(_, 1.1, `Find the string 'loading'`)
 	const addr = Exe.FindText("loading");
 	if (addr < 0)
 		throw Error("'loading' not found");

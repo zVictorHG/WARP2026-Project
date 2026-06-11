@@ -1,3 +1,21 @@
+# zVictorHG - 2026-06-11 build
+
+Based on the SKylove 2025-06-04 build.
+
+## Common Updates
+- Updated GitHub, Discord and Ko-fi links for the customized WARP build.
+- Added the **Aether_Forge** style.
+- Hidden deprecated/unused patch entries from the GUI list: **No1and1Arg**, **NoFilenameCheck**, **CustomJobs**, **CustomShields**, **HidePacketsFromPEEK** and **DisableProbability**.
+
+## Patch Updates
+- Updated and validated 2026-01-07 anchors for **GRFsFromIni**, **UseOldLogin**, **EnableWho**, **MediumCamAngle**, **HideRoulette**, **CallKoreaClientInfo**, **CustomWinTitle**, **EnableDnsSupport**, **SendClientFlags**, **NoHelpMsg**, **PlainTextDesc**, **CloseCutinOnEsc**, **LoadKrExtSettings**, **DeleteCharWithEmail**, **EnableFlagEmotes**, **EnableFlagAnimation**, **HideNewButtons**, **ShowNewButtons**, **HideZeroDateInGuildWin**, **DataFolderFirst**, **IncreaseHairsLimit**, **Intravision**, **NoEquipWinTitle**, **ShowLicense**, **HideLicense**, **IgnoreEntryQueueErr**, **SkipInFriendList**, **SkipInGuildList**, **CustomAuraLimits** and **AllowPL2Leave**.
+- Ported/fixed service-selection flow for **SkipServiceSelect** and **Use Opening for service selection**.
+- Updated **EnableProxy** to preserve native route behavior across service changes.
+- Updated **AllowSkillSpam** behavior.
+- Updated **RestoreBattlegroundUI** anchors/logic for 2026 clients.
+- Updated **New UI button visibility** patches so **Show Buttons (New UI)** and **Hide Buttons (New UI)** expose the expected button-selection inputs.
+- Fixed **Customize Window title** application/runtime behavior on the 2026-01-07 client.
+
 # SKylove — 2025-06-04 build
 - ShowReplayBtn
 - @llchrisll: spopup & QuestQualificationInfo patches; added Rune System Lua and fixed related issues
@@ -76,11 +94,11 @@
 # 2022-12-30 Changes
 
 ## Patch Updates
-- Fixed bug in [Enforce 0 C in Cash Shop](https://github.com/Neo-Mind/WARP/issues/115) patch.
+- Fixed bug in [Enforce 0 C in Cash Shop](https://github.com/zVictorHG) patch.
 
-- Updated valid build dates for [Fix Homunculi AI](https://github.com/Neo-Mind/WARP/issues/93) patch.
+- Updated valid build dates for [Fix Homunculi AI](https://github.com/zVictorHG) patch.
 
-- Fixed bug in [Increase Headgear View ID](https://discord.com/channels/780647066871136266/1051858994584633404) patch.
+- Fixed bug in [Increase Headgear View ID](zvictorhg) patch.
 
 
 # 2022-10-05 Changes
@@ -134,17 +152,17 @@
 # 2022-09-08 Changes
 
 ## Patch Updates
-- Updated [Skill spam patch for newer clients](https://github.com/Neo-Mind/WARP/issues/102).
+- Updated [Skill spam patch for newer clients](https://github.com/zVictorHG).
 
 - Updated copyrights for all patch definition yml files.
 
-- Updated [Disable Gameguard patch for 2022 clients](https://github.com/Neo-Mind/WARP/issues/95)
+- Updated [Disable Gameguard patch for 2022 clients](https://github.com/zVictorHG)
 
 
 # 2022-09-06 Changes
 
 ## Patch Updates
-- Fixed [bug with Custom Captcha decompression patch](https://github.com/Neo-Mind/WARP/issues/103)
+- Fixed [bug with Custom Captcha decompression patch](https://github.com/zVictorHG)
 
 
 # 2022-08-24 Changes
@@ -156,16 +174,16 @@
 # 2022-08-23 Changes
 
 ## Patch Updates
-- Fixed [crashes with Custom Shield patch](https://github.com/Neo-Mind/WARP/issues/97)
+- Fixed [crashes with Custom Shield patch](https://github.com/zVictorHG)
 
-- Fixed [crashes with Custom Font Height patches](https://github.com/Neo-Mind/WARP/issues/92)
+- Fixed [crashes with Custom Font Height patches](https://github.com/zVictorHG)
 
-- Added patch to [Disable password encryption in login packet for new clients](https://github.com/Neo-Mind/WARP/issues/94)
+- Added patch to [Disable password encryption in login packet for new clients](https://github.com/zVictorHG)
 
-- Fixed [conflict in Shared head palette patches](https://github.com/Neo-Mind/WARP/issues/84)
+- Fixed [conflict in Shared head palette patches](https://github.com/zVictorHG)
 
-- Updated Lua files for Custom Job patch with [missing entries for new jobs](https://github.com/Neo-Mind/WARP/issues/98)
-  and [correct mappings for doram race](https://github.com/Neo-Mind/WARP/issues/96)
+- Updated Lua files for Custom Job patch with [missing entries for new jobs](https://github.com/zVictorHG)
+  and [correct mappings for doram race](https://github.com/zVictorHG)
   
 - Partially fixed Gameguard patch. Still needs more work. 
 
@@ -179,8 +197,8 @@
 
 ## Patch Updates
 - Added new patches.
-	- [Case-Insensitive cash shop search](https://github.com/Neo-Mind/WARP/issues/13)
-	- [Enable "Notice" email section](https://github.com/Neo-Mind/WARP/issues/41)
+	- [Case-Insensitive cash shop search](https://github.com/zVictorHG)
+	- [Enable "Notice" email section](https://github.com/zVictorHG)
 
 - Added the start date for "No Color" translation.
 
@@ -193,11 +211,11 @@
 ## Patch Updates
 - Fixed crash in **`Custom Job`** patch.
 
-- Fixed [issue in Draw Shield on Top patch](https://github.com/Neo-Mind/WARP/issues/83)
+- Fixed [issue in Draw Shield on Top patch](https://github.com/zVictorHG)
 
-- Updated **`Disconnect to Login Window`** patch [for newer clients](https://github.com/Neo-Mind/WARP/issues/81)
+- Updated **`Disconnect to Login Window`** patch [for newer clients](https://github.com/zVictorHG)
 
-- Fixed [bug in Increase Zoom Out patch](https://github.com/Neo-Mind/WARP/issues/44).
+- Fixed [bug in Increase Zoom Out patch](https://github.com/zVictorHG).
 
 
 # 2022-02-22 Changes
@@ -205,7 +223,7 @@
 ## Patch Updates
 - Updated LUA files for **`Custom Job`** patch.
 
-- Added new translation [as requested](https://github.com/Neo-Mind/WARP/issues/89)
+- Added new translation [as requested](https://github.com/zVictorHG)
 
 - Updated Custom Path patches to handle the various suffixes with a slightly better approach.
 
@@ -251,8 +269,8 @@
 # 2021-11-04 Changes
 
 ## Patch Updates
-- Fixed [bug in Enable Proxy Support patch](https://github.com/Neo-Mind/WARP/issues/80)
-- Fixed [bug in Allow Guild activities in clan patch](https://github.com/Neo-Mind/WARP/issues/75)
+- Fixed [bug in Enable Proxy Support patch](https://github.com/zVictorHG)
+- Fixed [bug in Allow Guild activities in clan patch](https://github.com/zVictorHG)
 
 # 2021-10-29 Changes
 
@@ -303,7 +321,7 @@
 - Fixed bug in **`UserChoice`** function
 
 ## Patch Updates
-- Updated patch **`Enable DNS Support`** to fix[Issue #77](https://github.com/Neo-Mind/WARP/issues/77)
+- Updated patch **`Enable DNS Support`** to fix[Issue #77](https://github.com/zVictorHG)
 
 
 # 2021-10-26 Changes
@@ -392,7 +410,7 @@
 
 ## Patch Updates
 - Added temporary fix for integers being loaded as strings from session files.
-  Fixes [bug with Custom Jobs patch](https://github.com/Neo-Mind/WARP/issues/73)
+  Fixes [bug with Custom Jobs patch](https://github.com/zVictorHG)
 
 
 # 2021-08-31 Changes
@@ -406,13 +424,13 @@
 # 2021-08-27 Changes
 
 ## Patch Updates
-- Fixed [bug with MonSizeEffect lub patch](https://github.com/Neo-Mind/WARP/issues/70)
+- Fixed [bug with MonSizeEffect lub patch](https://github.com/zVictorHG)
 
-- Fixed [bug with Hide Packets from PEEK patch](https://github.com/Neo-Mind/WARP/issues/68)
+- Fixed [bug with Hide Packets from PEEK patch](https://github.com/zVictorHG)
 
-- Fixed [bug with Restore model culling patch](https://github.com/Neo-Mind/WARP/issues/67)
+- Fixed [bug with Restore model culling patch](https://github.com/zVictorHG)
 
-- Fixed [bug with New Button visibility patch](https://github.com/Neo-Mind/WARP/issues/72)
+- Fixed [bug with New Button visibility patch](https://github.com/zVictorHG)
 
 ## Script Updates
 - Renamed the `self_call` sub function to `self`
@@ -662,7 +680,7 @@
 # 2021-07-31 Changes
 
 ## Patch Updates
-- Fixed the remaining [issue with Increase Hair style patches](https://github.com/Neo-Mind/WARP/issues/56).
+- Fixed the remaining [issue with Increase Hair style patches](https://github.com/zVictorHG).
 
 
 # 2021-07-29 Changes
@@ -672,9 +690,9 @@
 
 - Divided the HP bar resize patch for mobs into 3 => 1 for Normal, 1 for Mini-Boss and 1 for Boss monster respectively.
 
-  Now no more [conflicts about the health bar](https://github.com/Neo-Mind/WARP/issues/57).
+  Now no more [conflicts about the health bar](https://github.com/zVictorHG).
 
-- Fixed the [byte order issue in Packet Key patches](https://github.com/Neo-Mind/WARP/issues/55). 
+- Fixed the [byte order issue in Packet Key patches](https://github.com/zVictorHG). 
 
   The `PACKET` object now better recognizes patched clients and `Get Packet Keys` extension works correctly for patched clients too.
 
@@ -693,9 +711,9 @@
 # 2021-07-24 Changes
 
 ## Patch Updates
-- Fixed [issue in Packet key patches](https://github.com/Neo-Mind/WARP/issues/55) for latest clients.
+- Fixed [issue in Packet key patches](https://github.com/zVictorHG) for latest clients.
 
-- Fixed [issue with Resize MVP health bar](https://github.com/Neo-Mind/WARP/issues/57).
+- Fixed [issue with Resize MVP health bar](https://github.com/zVictorHG).
 
 ## Tool Updates
 - Corrected 1 bug in `OpData` class.
@@ -744,7 +762,7 @@
 # 2021-07-15 Changes
 
 ## Patch Updates
-- Added patch for [Chris' lua overrides](https://github.com/llchrisll/ROenglishRE/tree/master/Custom%20Lua%20Files)
+- Added patch for [Chris' lua overrides](https://github.com/zVictorHG)
 
 ## Extension Updates
 - Bug fix (Changed all the wrong `CaseInsensitive` names to `CASE_INSENSITIVE`).
@@ -755,7 +773,7 @@
 # 2021-07-12 Changes
 
 ## Patch Updates
-- Fixed bug in [Disable Multiple Windows](https://github.com/Neo-Mind/WARP/issues/52) patch.
+- Fixed bug in [Disable Multiple Windows](https://github.com/zVictorHG) patch.
 
 - Some minor cleanup.
 
@@ -765,7 +783,7 @@
 ## Patch Updates
 - Fixed issue with doram palette in **`Increase Hairstyle`** patches.
 
-- (Hopefully) Fixed the rendering bug with [Increase Zoom](https://github.com/Neo-Mind/WARP/issues/44) patches.
+- (Hopefully) Fixed the rendering bug with [Increase Zoom](https://github.com/zVictorHG) patches.
 
 ## Tool Updates
 - Added thai language file with translations for the new entries.
@@ -776,9 +794,9 @@
 # 2021-07-06 Changes
 
 ## Tool Updates
-- Added [Exe.ClearSavedInput](https://github.com/Neo-Mind/WARP/wiki/Exe-Object#patch-related) for clearing existing inputs. Useful in Test Bench.
+- Added [Exe.ClearSavedInput](https://github.com/zVictorHG) for clearing existing inputs. Useful in Test Bench.
 
-- Fixed the bug with WARP crashing when running **`Exe.GetUserInput`** from [Script Window](https://github.com/Neo-Mind/WARP/wiki/Script-Window).
+- Fixed the bug with WARP crashing when running **`Exe.GetUserInput`** from [Script Window](https://github.com/zVictorHG).
 
 
 # 2021-07-05 Changes
@@ -799,9 +817,9 @@
 	
 	- **`INT3`**
 
-- Changed [Exe.IsSelected](https://github.com/Neo-Mind/WARP/wiki/Exe-Object#patch-related) function to [Warp.GetPatchState](https://github.com/Neo-Mind/WARP/wiki/Warp-Object#functions) for logical reasons.
+- Changed [Exe.IsSelected](https://github.com/zVictorHG) function to [Warp.GetPatchState](https://github.com/zVictorHG) for logical reasons.
 
-- Changed [Exe.TestMode](https://github.com/Neo-Mind/WARP/wiki/Exe-Object#properties) to [Warp.TestMode](https://github.com/Neo-Mind/WARP/wiki/Warp-Object#properties) as well.
+- Changed [Exe.TestMode](https://github.com/zVictorHG) to [Warp.TestMode](https://github.com/zVictorHG) as well.
 
 - Added 2 functions for displaying messages from patch/extension scripts.
 
@@ -815,19 +833,19 @@
 
 - Updated **`Dark_Mode`** style for the new entries in UI (for e.g. the filter/search options).
 
-- Updated the templates for [Language](https://github.com/Neo-Mind/WARP/wiki/Language-File) & [Style](https://github.com/Neo-Mind/WARP/wiki/Style-File) files.
+- Updated the templates for [Language](https://github.com/zVictorHG) & [Style](https://github.com/zVictorHG) files.
 
 
 # 2021-07-02 Changes
 
 ## Tool Updates
-- Removed [NO_ALLOC](https://github.com/Neo-Mind/WARP/wiki/Scripted-API#strings--error-messages) constant since it is no longer needed.
+- Removed [NO_ALLOC](https://github.com/zVictorHG) constant since it is no longer needed.
 
-- Changed the pattern generated by [Filler](https://github.com/Neo-Mind/WARP/wiki/Scripted-Functions#filler-functions) function for bc = 1. Now it looks like ?01 and ?121 etc.
+- Changed the pattern generated by [Filler](https://github.com/zVictorHG) function for bc = 1. Now it looks like ?01 and ?121 etc.
 
-- Added the reflection options in [Instr](https://github.com/Neo-Mind/WARP/wiki/Instr) class and [CaseAddr](https://github.com/Neo-Mind/WARP/wiki/Scripted-Functions#extractors) function.
+- Added the reflection options in [Instr](https://github.com/zVictorHG) class and [CaseAddr](https://github.com/zVictorHG) function.
 
-- Added [Exe.GetSavedInput](https://github.com/Neo-Mind/WARP/wiki/Exe-Object#user-input) function to retrieve the value of a previously saved user input (either obtained from `session file` or using [Exe.GetUserInput](https://github.com/Neo-Mind/WARP/wiki/Exe-Object#user-input)
+- Added [Exe.GetSavedInput](https://github.com/zVictorHG) function to retrieve the value of a previously saved user input (either obtained from `session file` or using [Exe.GetUserInput](https://github.com/zVictorHG)
 
 - Added support for encrypted scripting. To achieve this, following 3 functions have been added:
 
@@ -858,7 +876,7 @@
 # 2021-06-26 Changes
 
 ## Tool Updates
-- Added *numeric vector* input [DataTypes](https://github.com/Neo-Mind/WARP/wiki/Inbuilt-API#datatype)
+- Added *numeric vector* input [DataTypes](https://github.com/zVictorHG)
 
 	- **`D_VecI8, D_VecI16, D_VecI32`**
 
@@ -876,9 +894,9 @@
 # 2021-06-25 Changes
 
 ## Tool Updates
-- Added `view` button along with `browse` button for [D_InFile & D_OutFile](https://github.com/Neo-Mind/WARP/wiki/Inbuilt-API#datatype) types to open currently specified filename.
+- Added `view` button along with `browse` button for [D_InFile & D_OutFile](https://github.com/zVictorHG) types to open currently specified filename.
 
-- Fixed bug with saving user inputs of [D_Choice & D_MultiChoice](https://github.com/Neo-Mind/WARP/wiki/Inbuilt-API#datatype) types.
+- Fixed bug with saving user inputs of [D_Choice & D_MultiChoice](https://github.com/zVictorHG) types.
 
 
 # 2021-06-24 Changes
@@ -890,7 +908,7 @@
 
 	- To do this an additional (optional) boolean argument has been added to all of the **`Exe.Get`** functions.
 	
-- Renamed **`D_List & D_MultiList`** types to [D_Choice & D_MultiChoice](https://github.com/Neo-Mind/WARP/wiki/Inbuilt-API#datatype) respectively.
+- Renamed **`D_List & D_MultiList`** types to [D_Choice & D_MultiChoice](https://github.com/zVictorHG) respectively.
 
 	- Also added `Selected value` display and filtering support (similar to `Patch List`) for both of them.
 
@@ -898,23 +916,23 @@
 # 2021-06-23 Changes
 
 ## Tool Updates
-- Added [Warp.SetPatchState](https://github.com/Neo-Mind/WARP/wiki/Warp-Object#functions) function for updating the 'selection' state from script.
+- Added [Warp.SetPatchState](https://github.com/zVictorHG) function for updating the 'selection' state from script.
 
 - Added dependency chain support (using **`'needs'`** key in **`Patches.yml`**
 
-- Added case-insensitive search option to [Exe.FindText & Exe.FindTextN] functions (only for default encoding i.e. [ASCII](https://github.com/Neo-Mind/WARP/wiki/Inbuilt-API#encoding)).
+- Added case-insensitive search option to [Exe.FindText & Exe.FindTextN] functions (only for default encoding i.e. [ASCII](https://github.com/zVictorHG)).
 
-	- [CASE_SENSITIVE & CASE_INSENSITIVE](https://github.com/Neo-Mind/WARP/wiki/Inbuilt-API#sensitivity) keywords have been added to support this.
+	- [CASE_SENSITIVE & CASE_INSENSITIVE](https://github.com/zVictorHG) keywords have been added to support this.
 
 
 # 2021-06-22 Changes
 
 ## Tool Updates
-- Added **`D_Float`** user input [DataType](https://github.com/Neo-Mind/WARP/wiki/Inbuilt-API#datatype)
+- Added **`D_Float`** user input [DataType](https://github.com/zVictorHG)
 
 - Added **`'stepSize'`** constraint for all numeric inputs.
 
-- Added [System.Trash](https://github.com/Neo-Mind/WARP/wiki/System-Object#modifications) command for moving files to `Recycle Bin`
+- Added [System.Trash](https://github.com/zVictorHG) command for moving files to `Recycle Bin`
 
 - Added an optional ***`Build Version`*** display in [Main GUI]
 
@@ -941,7 +959,7 @@
 ## Tool Updates
 - Added **`Settings`** & **`Donate`** buttons to both GUIs
 
-- Modified [Exe.FindSpace](https://github.com/Neo-Mind/WARP/wiki/Exe-Extractors#content-query) function to return **`[PHYSICAL, VIRTUAL]`** address pair
+- Modified [Exe.FindSpace](https://github.com/zVictorHG) function to return **`[PHYSICAL, VIRTUAL]`** address pair
 
 - **`Exe.FindSpace`** also throws an error automatically in case it fails.
 
@@ -974,7 +992,7 @@
 
 	- Enable Custom Homunculi
 
-	- [Fix homunculus attack AI](https://github.com/Neo-Mind/WARP/issues/38)
+	- [Fix homunculus attack AI](https://github.com/zVictorHG)
 
 	- Send client flags
 
@@ -1000,7 +1018,7 @@
 # 2021-06-14 Changes
 
 ## Patch Updates
-- Added patch to [Enable item preview in Cash Shop](https://github.com/Neo-Mind/WARP/issues/17).
+- Added patch to [Enable item preview in Cash Shop](https://github.com/zVictorHG).
 
 - Added patch to Decrease the zoom to 25% of Maximum.
 
@@ -1013,7 +1031,7 @@
 # 2021-06-12 Changes
 
 ## Patch Updates
-- Added patch to [Enable Custom Player Skills](https://github.com/Neo-Mind/WARP/issues/25).
+- Added patch to [Enable Custom Player Skills](https://github.com/zVictorHG).
 
 ## Tool Updates
 - Updated signature of [SwapFiller & SetFillTarget] functions to accept index & bytecount together as a tuple (2 element array).
@@ -1022,17 +1040,17 @@
 # 2021-06-11 Changes
 
 ## Patch Updates
-- Added patch for [Opening to Service Select from login screen](https://github.com/Neo-Mind/WARP/issues/35) in latest clients.
+- Added patch for [Opening to Service Select from login screen](https://github.com/zVictorHG) in latest clients.
 
-- Added patch for [Restoring Songs Effects](https://github.com/Neo-Mind/WARP/issues/36)
+- Added patch for [Restoring Songs Effects](https://github.com/zVictorHG)
 
-- Fixed bug in [Selected Login Background](https://github.com/Neo-Mind/WARP/issues/33) patch.
+- Fixed bug in [Selected Login Background](https://github.com/zVictorHG) patch.
 
-- Fixed bug in [Hide Buttons patch for new UI](https://github.com/Neo-Mind/WARP/issues/32).
+- Fixed bug in [Hide Buttons patch for new UI](https://github.com/zVictorHG).
 
-- Fixed bug in [Custom Shields patch](https://github.com/Neo-Mind/WARP/issues/37) related to showing two handed weapons.
+- Fixed bug in [Custom Shields patch](https://github.com/zVictorHG) related to showing two handed weapons.
 
-- Fixed bugs in **`Show Exp Numbers`** patch. Thanks [@Haziel](https://github.com/SirHaziel) for pointing it out.
+- Fixed bugs in **`Show Exp Numbers`** patch. Thanks [@Haziel](https://github.com/zVictorHG) for pointing it out.
 
 ## Tool Updates
 - Slight update to **`LUA.addLoaders`** function to report the reference lua file name (in case it fails)
@@ -1043,9 +1061,9 @@
 ## Patch Updates
 - Made the higher limit of **`Custom Jobs`** patch a user input (restricted to max of `5000`).
 
-- Fixed the [arrow translations](https://github.com/Neo-Mind/WARP/issues/24). Since we are restricted to ASCII table, the best resembling values were picked from them.
+- Fixed the [arrow translations](https://github.com/zVictorHG). Since we are restricted to ASCII table, the best resembling values were picked from them.
 
-- Fixed remaining [bugs in Increase Hairstyle patches](https://github.com/Neo-Mind/WARP/issues/16) (hopefully I have covered all the missed tables now)
+- Fixed remaining [bugs in Increase Hairstyle patches](https://github.com/zVictorHG) (hopefully I have covered all the missed tables now)
 
 - Updated **`Shared Head palette`** patches to work well with **`Increase Hairstyle`** patches. 
 
@@ -1060,13 +1078,13 @@
 # 2021-06-05 Changes
 
 ## Patch Updates
-- Fixed final [bug with Custom Vending Limit](https://github.com/Neo-Mind/WARP/issues/15) patch that was present in newer clients.
+- Fixed final [bug with Custom Vending Limit](https://github.com/zVictorHG) patch that was present in newer clients.
 
-- Fixed 1 typo in **`Patches.yml`** (thanks [@Everade](https://github.com/Everade) for pointing it out).
+- Fixed 1 typo in **`Patches.yml`** (thanks [@Everade](https://github.com/zVictorHG) for pointing it out).
 
 - Fixed titles for user inputs in **`Resize \* Box`** patches.
 
-- Fixed 1 typo in [Translate arrows to English](https://github.com/Neo-Mind/WARP/issues/24) patch. But still the arrows arent correct.
+- Fixed 1 typo in [Translate arrows to English](https://github.com/zVictorHG) patch. But still the arrows arent correct.
 
 ## Tool Updates
 - Added link to Changelog in [README](README.md).
@@ -1075,23 +1093,23 @@
 # 2021-06-03 Changes
 
 ## Patch Updates
-- Added patch to [Show Damage for GvG](https://github.com/Neo-Mind/WARP/issues/23).
+- Added patch to [Show Damage for GvG](https://github.com/zVictorHG).
 
-- Added patch to [Translate arrows to English](https://github.com/Neo-Mind/WARP/issues/24).
+- Added patch to [Translate arrows to English](https://github.com/zVictorHG).
 
 - Fixed issues with **`Packet Key`** patches.
 
-- Fixed [issue with Custom Vending Limit](https://github.com/Neo-Mind/WARP/issues/15) patch.
+- Fixed [issue with Custom Vending Limit](https://github.com/zVictorHG) patch.
 
-- Fixed [issue with Custom Walk Delay](https://github.com/Neo-Mind/WARP/issues/26) patch.
+- Fixed [issue with Custom Walk Delay](https://github.com/zVictorHG) patch.
 
-- Fixed [issue with Close Cutin on Esc key](https://github.com/Neo-Mind/WARP/issues/28) patch.
+- Fixed [issue with Close Cutin on Esc key](https://github.com/zVictorHG) patch.
 
-- Updated the translation made by [@Everade](https://github.com/Everade).
+- Updated the translation made by [@Everade](https://github.com/zVictorHG).
 
 ## Extension Updates
 - Fixed problem with **`Get Packet Keys`** extension (now it is able to get the keys from patched clients as well).
 
-[Main GUI](https://github.com/Neo-Mind/WARP/wiki/Main-GUI)
-[Test Bench](https://github.com/Neo-Mind/WARP/wiki/Test-Bench)
-[SwapFiller & SetFillTarget](https://github.com/Neo-Mind/WARP/wiki/Scripted-Functions#filler-functions)
+[Main GUI](https://github.com/zVictorHG)
+[Test Bench](https://github.com/zVictorHG)
+[SwapFiller & SetFillTarget](https://github.com/zVictorHG)

@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shinryo, MS, Neo-Mind                                  *
+*   Author(s)     : Shinryo, MS, Neo-Mind, Victor Hugo                     *
 *   Created Date  : 2020-11-08                                             *
-*   Last Modified : 2024-08-22                                             *
+*   Last Modified : 2026-06-11                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -35,7 +35,27 @@ ShowLicense = function(_)
 	$$(_, 1.1, `Find the location of the Guildflag string`)
 	let addr = Exe.FindText("model\\3dmob\\guildflag90_1.gr2", CASE_INSENSITIVE);
 	if (addr < 0)
-		throw Error("Guildflag string not found");
+	{
+		$$(_, 1.1, `Fallback to the 2026 langtype gate inside the EULA builder`)
+		const code2026 =
+			`A1 ?? ?? ?? ??`
+		+	` 83 F8 04`
+		+	` 74 ??`
+		+	` 83 F8 08`
+		+	` 74 ??`
+		+	` 83 F8 09`
+		+	` 74 ??`
+		+	` 83 F8 06`
+		+	` 0F 85 ?? ?? ?? ??`;
+
+		addr = Exe.FindHex(code2026);
+		if (addr < 0)
+			throw Error("Guildflag string not found");
+
+		$$(_, 1.2, `Force the first langtype branch to always proceed with License creation`)
+		Exe.SetJMP(addr + 8);
+		return true;
+	}
 
 	$$(_, 1.2, `Find where its PUSHed (it comes just before the conditional jump)`)
 	const code =
@@ -94,7 +114,67 @@ HideLicense = function(_)
 	$$(_, 1.1, `Find the string 'btn_disagree'`)
 	let addr = Exe.FindText("btn_disagree");
 	if (addr < 0)
-		throw Error("'btn_disagree' not found");
+	{
+		$$(_, 1.1, `Fallback to the 2026 CLoginMode::OnChangeState switch`)
+		const code2026 =
+			`83 F8 26`
+		+	` 0F 87 ?? ?? ?? ??`
+		+	` 0F B6 80 ?? ?? ?? ??`
+		+	` FF 24 85 ?? ?? ?? ??`;
+
+		const selectCode2026 =
+			`E8 ?? ?? ?? ??`
+		+	` 6A 01`
+		+	` 8B C8`
+		+	` E8 ?? ?? ?? ??`
+		+	` FF 35 ?? ?? ?? ??`
+		+	` 8D B7 E4 6E 00 00`
+		+	` 8B CE`
+		+	` E8 ?? ?? ?? ??`;
+
+		const selectAddr = Exe.FindHex(selectCode2026);
+		const selectVir = selectAddr > 0 ? Exe.Phy2Vir(selectAddr, CODE) : 0;
+		if (selectAddr < 0)
+			throw Error("'btn_disagree' not found");
+
+		let idxTblPhy = -1;
+		let jmpTblPhy = -1;
+		const addrs2026 = Exe.FindHexN(code2026);
+		if (addrs2026.isEmpty())
+			throw Error("'btn_disagree' not found");
+
+		for (const at of addrs2026)
+		{
+			const idxTblVir = Exe.GetUint32(at + 12);
+			const jmpTblVir = Exe.GetUint32(at + 19);
+			const curIdxTblPhy = Exe.Vir2Phy(idxTblVir, CODE);
+			const curJmpTblPhy = Exe.Vir2Phy(jmpTblVir, CODE);
+			if (curIdxTblPhy < 0 || curJmpTblPhy < 0)
+				continue;
+
+			for (let i = 0; i < 8; i++)
+			{
+				if (Exe.GetInt32(curJmpTblPhy + i * 4) === selectVir)
+				{
+					idxTblPhy = curIdxTblPhy;
+					jmpTblPhy = curJmpTblPhy;
+					break;
+				}
+			}
+			if (idxTblPhy > 0)
+				break;
+		}
+		if (idxTblPhy < 0 || jmpTblPhy < 0)
+			throw Error("2026 state tables missing");
+
+		$$(_, 2.1, `Route the two license states to Select List, unless SkipServiceSelect is enabled`)
+		const target = Warp.GetPatchState("SkipServiceSelect")
+			? Exe.GetInt32(jmpTblPhy + 2 * 4)
+			: Exe.GetInt32(jmpTblPhy + 6 * 4);
+		Exe.SetInt32(jmpTblPhy, target);
+		Exe.SetInt32(jmpTblPhy + 4, target);
+		return true;
+	}
 
 	$$(_, 1.2, `Find where its PUSHed (only done once in entire client)`)
 	const refAddr = Exe.FindHex( PUSH(addr) ); //push offset "btn_disagree"

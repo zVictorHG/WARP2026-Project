@@ -22,9 +22,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Secret, Andrei (4144), X-EcutiOnner                    *
+*   Author(s)     : Secret, Andrei (4144), X-EcutiOnner, Victor Hugo       *
 *   Created Date  : 2020-11-12                                             *
-*   Last Modified : 2024-08-26                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -37,11 +37,9 @@ LoadKrExtSettings = function(_)
     LANGTYPE.load();
 
     $$(_, 1.2, `Find where ExternalSettings_kr string is PUSHed`);
-    const refAddr = Exe.FindHex(
-        ROC.FullVer == 14.29
-          ? ( MOV(ECX, this.PathAddr) + PUSH_1 + PUSH(ECX) )
-          :   PUSH(this.PathAddr)
-    );
+    let refAddr = Exe.FindHex(PUSH(this.PathAddr));
+    if (refAddr < 0)
+        refAddr = Exe.FindHex(MOV(ECX, this.PathAddr) + PUSH_1 + PUSH(ECX));
     if (refAddr < 0)
         throw Error("'ExternalSettings_kr' reference missing");
 
@@ -50,7 +48,17 @@ LoadKrExtSettings = function(_)
           MOV(EAX, [LANGTYPE])    // mov eax,[g_serviceType]
         + CMP(EAX, ' [00010..0]') // cmp eax, 12h/14h
         + JA();                   // ja  _skip
-    const cmpAddr = Exe.FindHex(cmpSig, refAddr - 0x500, refAddr);
+    let cmpAddr = Exe.FindHex(cmpSig, refAddr - 0x500, refAddr);
+    if (cmpAddr < 0)
+    {
+        const switchSig =
+            `A1 ?? ?? ?? ??`          // mov eax, [g_serviceType-like global]
+        +   ` 83 F8 ??`               // cmp eax, max service type
+        +   ` 0F 87 ?? ?? ?? ??`      // ja _skip
+        +   ` FF 24 85 ?? ?? ?? ??`;  // jmp [eax*4 + table]
+
+        cmpAddr = Exe.FindHex(switchSig, refAddr - 0x500, refAddr);
+    }
     if (cmpAddr < 0)
         throw Error("Langtype Comparison not found");
 

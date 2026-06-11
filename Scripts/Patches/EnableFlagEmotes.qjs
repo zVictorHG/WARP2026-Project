@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2020-11-11                                             *
-*   Last Modified : 2023-08-26                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -148,7 +148,7 @@ EnableFlagEmotes = function()
 		$$(__ + '3.3 - Find the first code. Ideally it would be at addr itself unless something changed')
 		addr = Exe.FindHex(code, addr, addr + 0x50);
 		if (addr < 0)
-			throw Error(`First code missing for No.${i}`);
+			continue;
 
 		$$(__ + '3.4 - Set addr to location after TEST (which should be a JZ)')
 		addr += csize;

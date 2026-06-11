@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2021-08-20                                             *
-*   Last Modified : 2024-08-01                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -105,54 +105,98 @@ export function load()
 
 	$$(_, 1.4, `Find the string 'data.grf' or 'sdata.grf' for really old clients`)
 	Name = ROC.Post2010 ? "data.grf" : "sdata.grf";
-	Addr = Exe.FindText(Name);
+	let addrs = Exe.FindHexN(Name.toHex());
+	if (addrs.isEmpty())
+	{
+		Addr = Exe.FindText(Name);
+		if (Addr > 0)
+			addrs = [Addr];
+	}
 
-	if (Addr < 0)
+	if (addrs.isEmpty())
 		throw Log.rise(ErrMsg = new Error(`${self} - 'data.grf' not found`));
 
-	$$(_, 1.5, `Convert to hex`)
-	Hex = Addr.toHex();
+	$$(_, 1.5, `Prioritize real data strings over injected code stubs`)
+	const codeEnd = Exe.GetSectEnd(CODE);
+	addrs.sort((a, b) =>
+	{
+		const aCode = a <= codeEnd;
+		const bCode = b <= codeEnd;
+		return (aCode === bCode) ? (a - b) : (aCode ? 1 : -1);
+	});
 
 	$$(_, 1.6, `Find where it is PUSHed`)
 	let addr2 = -1;
-	if (Exe.Version >= 14.0) //for VC14.16
+	for (const addr of addrs)
 	{
-		const code =
-			MOV(ECX, POS4WC)   	//mov ecx, offset <g_fileMgr>
-		+	TEST(EAX, EAX)      //test eax, eax
-		+	SETNE([POS4WC])     //setne byte ptr [addr2]
-		+	PUSH(Hex)           //push offset "data.grf"
-		;
-
-		addr2 = Exe.FindHex(code);
-		if (addr2 > 0)
+		const hex = addr.toHex();
+		let refAddr = -1;
+		let movFMgr = '';
+		if (Exe.Version >= 14.0) //for VC14.16
 		{
-			$$(_, 2.1, `Save the Reference address (where the PUSH occurs in VC14.16) & extract the g_FileMgr MOV before it`)
-			RefAddr = addr2 + code.byteCount() - 5;
-			MovFMgr = Exe.GetHex(addr2, 5);
+			const code =
+				MOV(ECX, POS4WC)   	//mov ecx, offset <g_fileMgr>
+			+	TEST(EAX, EAX)      //test eax, eax
+			+	SETNE([POS4WC])     //setne byte ptr [addr2]
+			+	PUSH(hex)           //push offset "data.grf"
+			;
+
+			addr2 = Exe.FindHex(code);
+			if (addr2 > 0)
+			{
+				$$(_, 2.1, `Save the Reference address (where the PUSH occurs in VC14.16) & extract the g_FileMgr MOV before it`)
+				refAddr = addr2 + code.byteCount() - 5;
+				movFMgr = Exe.GetHex(addr2, 5);
+			}
+		}
+		if (refAddr < 0) //for VC6-VC11 or when the above match failed
+		{
+			const part1 = PUSH(hex);        //push offset "data.grf"
+			const part2 = MOV(ECX, POS4WC); //mov ecx, <g_fileMgr>
+			let delta = part1.byteCount();
+
+			addr2 = Exe.FindHex(part1 + part2);
+			if (addr2 < 0)
+			{
+				delta = 0;
+				addr2 = Exe.FindHex(part2 + part1);
+			}
+			if (addr2 < 0)
+				continue;
+
+			$$(_, 2.2, `Save the Reference address (where the PUSH occurs in older clients) & extract the g_FileMgr MOV after it`)
+			refAddr = addr2;
+			movFMgr = Exe.GetHex(addr2 + delta, 5);
+		}
+
+		Addr = addr;
+		Hex = hex;
+		RefAddr = refAddr;
+		MovFMgr = movFMgr;
+		break;
+	}
+	$$(_, 2.3, `Find newer GRF loader site by AddPak setup`)
+	{
+		const patterns = [
+			"6A 00 6A ?? 56 E8 ?? ?? ?? ?? 83 C4 14 C6 46 ?? 00 56 B9 ?? ?? ?? ?? E8",
+			"6A 00 6A ?? 57 E8 ?? ?? ?? ?? 83 C4 14 C6 47 ?? 00 57 B9 ?? ?? ?? ?? E8"
+		];
+		for (const code of patterns)
+		{
+			addr2 = Exe.FindHex(code);
+			if (addr2 < 0)
+				continue;
+
+			RefAddr = addr2 + 17;
+			MovFMgr = Exe.GetHex(RefAddr + 1, 5);
+			break;
 		}
 	}
-	if (addr2 < 0) //for VC6-VC11 or when the above match failed
-	{
-		const part1 = PUSH(Hex);        //push offset "data.grf"
-		const part2 = MOV(ECX, POS4WC); //mov ecx, <g_fileMgr>
-		let delta = part1.byteCount();
 
-		addr2 = Exe.FindHex(part1 + part2);
-		if (addr2 < 0)
-		{
-			delta = 0;
-			addr2 = Exe.FindHex(part2 + part1);
-		}
-		if (addr2 < 0)
-			throw Log.rise(ErrMsg = new Error(`${self} - 'data.grf' not used`));
+	if (RefAddr < 0)
+		throw Log.rise(ErrMsg = new Error(`${self} - 'data.grf' not used`));
 
-		$$(_, 2.2, `Save the Reference address (where the PUSH occurs in older clients) & extract the g_FileMgr MOV after it`)
-		RefAddr = addr2;
-		MovFMgr = Exe.GetHex(addr2 + delta, 5);
-	}
-
-	$$(_, 2.3, `Set [Valid] to true`)
+	$$(_, 2.5, `Set [Valid] to true`)
 	return Log.rise(Valid = true);
 }
 

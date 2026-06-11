@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Sapito Sucio                                            *
+*   Author(s)     : Sapito Sucio, Victor Hugo                              *
 *   Created Date  : 2025-01-11                                             *
-*   Last Modified : 2025-01-11                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -36,9 +36,28 @@ EnableFlagAnimation = function()
     $$(_ + '1.1 - Find the guild flag model string reference')
     const addr = Exe.FindText("model\\3dmob\\guildflag90_1.gr2");
     if (addr < 0)
-        throw Error("Guild flag model string not found");
+    {
+        $$(_ + '1.2 - Fallback to the donor-equivalent 2026 chain that still uses PUSH 5 before the langtype checks')
+        const pushAddr = Exe.FindHex(
+            "6A 00 6A 05 5? "
+        +   "B9 ?? ?? ?? ?? E8 ?? ?? ?? ?? "
+        +   "B9 ?? ?? ?? ?? E8 ?? ?? ?? ?? "
+        +   "E8 ?? ?? ?? ?? "
+        +   "A1 ?? ?? ?? ?? "
+        +   "83 F8 04 74 ?? "
+        +   "83 F8 08 74 ?? "
+        +   "83 F8 09 74 ?? "
+        +   "83 F8 06"
+        );
+        if (pushAddr < 0)
+            throw Error("Guild flag model string not found");
 
-    $$(_ + '1.2 - Find where it is used in a PUSH')
+        $$(_ + '2 - Change PUSH 5 to PUSH 1 in the 2026 fallback')
+        Exe.SetUint8(pushAddr + 3, 1);
+        return true;
+    }
+
+    $$(_ + '1.3 - Find where it is used in a PUSH')
     const code =
         PUSH_0              //push 0
     +   PUSH(5)            //push 5

@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2020-11-10                                             *
-*   Last Modified : 2024-08-09                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -30,6 +30,7 @@ IncreaseHairsLimit = function()
 {
 	const DoramHairLimit = 11;
 	const HumanHairLimit = 43;
+	const HumanHairLimitModern = 46;
 	const MaxHairLimit = 999;
 
 	//
@@ -49,25 +50,84 @@ IncreaseHairsLimit = function()
 	;
 
 	const DoramLimitAddr = Exe.FindHex(DoramLimitPrefix + DoramLimitSuffix);
-	if (DoramLimitAddr < 0)
+	let HumanLimitAddr = -1;
+	let DoramLimitSize = DoramLimitPrefix.byteCount() + DoramLimitSuffix.byteCount();
+	let HumanLimitSize = 0;
+	let isModern2025 = false;
+
+	if (DoramLimitAddr >= 0)
 	{
-		throw Error("Doram hair-limit pattern not found on CUIResourceMgr::GetHeadName.");
+		const HumanLimitPrefix =
+			CMP(ECX, HumanHairLimit)
+		+   JL(WCp)
+		;
+
+		const HumanLimitSuffix =
+			MOV([EDX], 13)
+		+   MOV(ECX, 13)
+		;
+
+		HumanLimitAddr = Exe.FindHex(HumanLimitPrefix + HumanLimitSuffix, DoramLimitAddr, DoramLimitAddr + 0x80);
+		if (HumanLimitAddr >= 0)
+		{
+			HumanLimitSize = HumanLimitPrefix.byteCount() + HumanLimitSuffix.byteCount();
+		}
 	}
 
-	const HumanLimitPrefix =
-		CMP(ECX, HumanHairLimit)
-	+   JL(WCp)
-	;
-
-	const HumanLimitSuffix =
-		MOV([EDX], 13)
-	+   MOV(ECX, 13)
-	;
-
-	const HumanLimitAddr = Exe.FindHex(HumanLimitPrefix + HumanLimitSuffix, DoramLimitAddr, DoramLimitAddr + 0x80);
-	if (HumanLimitAddr < 0)
+	if (DoramLimitAddr < 0 || HumanLimitAddr < 0)
 	{
-		throw Error("Human hair-limit pattern not found near Doram limiter.");
+		const DoramLimitPrefixModern =
+			CMP(ECX, 1)
+		+   JL(WCp)
+		+   CMP(ECX, DoramHairLimit)
+		+   JL(WCp)
+		;
+
+		const DoramLimitSuffixModern =
+			MOV([EDX], 10)
+		+   MOV(ECX, 10)
+		;
+
+		const HumanLimitPrefixModern =
+			TEST(ECX, ECX)
+		+   JS(WCp)
+		+   CMP(ECX, HumanHairLimitModern)
+		+   JL(WCp)
+		;
+
+		const HumanLimitSuffixModern =
+			MOV([EDX], 13)
+		+   MOV(ECX, 13)
+		;
+
+		const DoramLimitAddrModern = Exe.FindHex(DoramLimitPrefixModern + DoramLimitSuffixModern);
+		if (DoramLimitAddrModern < 0)
+			throw Error("Doram hair-limit pattern not found on CUIResourceMgr::GetHeadName.");
+
+		const HumanLimitAddrModern = Exe.FindHex(HumanLimitPrefixModern + HumanLimitSuffixModern, DoramLimitAddrModern, DoramLimitAddrModern + 0x100);
+		if (HumanLimitAddrModern < 0)
+			throw Error("Human hair-limit pattern not found near Doram limiter.");
+
+		let MaxHair = Exe.GetUserInput('$MaxHair', D_Uint16, "Limit input", "Enter the maximum no of hairstyles", HumanHairLimitModern,
+		{
+			saveDefault: true,
+			max: MaxHairLimit + 1,
+		});
+
+		if (MaxHair === false)
+			Cancel("Limit reverted to default");
+
+		CACHE.put('IH_Max', MaxHair);
+
+		Exe.SetNOPs(DoramLimitAddrModern, DoramLimitPrefixModern.byteCount() + DoramLimitSuffixModern.byteCount());
+		Exe.SetNOPs(HumanLimitAddrModern, HumanLimitPrefixModern.byteCount() + HumanLimitSuffixModern.byteCount());
+
+		isModern2025 = true;
+		IncrHairs.stage1('IncreaseHairsLimit');
+		if (Exe.Version > 6)
+			IncrHairs.stage2('IncreaseHairsLimit');
+
+		return true;
 	}
 
 	//
@@ -115,7 +175,7 @@ IncreaseHairsLimit = function()
 	let MaxHair = Exe.GetUserInput('$MaxHair', D_Uint16, "Limit input", "Enter the maximum no of hairstyles", 43,
 	{
 		saveDefault: true,
-		max: 1000,
+		max: MaxHairLimit + 1,
 	});
 	
 	if (MaxHair === false)
@@ -172,7 +232,7 @@ IncreaseHairsLimit = function()
 	//
 
 	Exe.SetNOPs(DoramLimitAddr, DoramLimitPrefix.byteCount() + DoramLimitSuffix.byteCount());
-	Exe.SetNOPs(HumanLimitAddr, HumanLimitPrefix.byteCount() + HumanLimitSuffix.byteCount());
+	Exe.SetNOPs(HumanLimitAddr, HumanLimitSize);
 
 	//
 	// Prepare the hooking code.

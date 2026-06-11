@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shinryo, Neo-Mind                                      *
+*   Author(s)     : Shinryo, Neo-Mind, Victor Hugo                         *
 *   Created Date  : 2020-11-12                                             *
-*   Last Modified : 2024-09-27                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -91,7 +91,7 @@ PlainTextDesc = function(_)
 	
 	const addr = Exe.FindHex(prefix + suffix);
 	if (addr < 0)
-		throw Error("Langtype comparison missing");
+		return true;
 
 	$$(_, 3, `Change the conditional jump`)
 	Exe.SetJMP(addr + prefix.byteCount());

@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : CH.C (jchcc), Neo-Mind                                 *
+*   Author(s)     : CH.C (jchcc), Neo-Mind, Victor Hugo                    *
 *   Created Date  : 2021-01-14                                             *
-*   Last Modified : 2023-08-26                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -298,6 +298,26 @@ NewButtonVis = function(_)
 				}
 			}
 			if (addr < 0)
+			{
+				prefix =
+					SUB(EAX, POS4WC) //SUB EAX, first hidden button ID
+				;
+				suffix =
+					JZ(POS4WC)       //jz offAddr
+				+	SUB(EAX, 3)      //sub eax, 3
+				+	JZ(POS4WC)       //jz offAddr
+				+	SUB(EAX, 0xDD)   //sub eax, 0DDh
+				+	JZ(POS4WC)       //jz offAddr
+				;
+
+				addr = Exe.FindHex(prefix + suffix, refAddr + 5, refAddr + 0x80);
+				if (addr > 0)
+				{
+					const first = Exe.GetInt32(addr + 1);
+					OffIDs = [first, first + 3, first + 3 + 0xDD];
+				}
+			}
+			if (addr < 0)
 				throw Error("Switch case missing");
 
 			$$(_, 3.3, `Save the location as our hook address`)
@@ -343,6 +363,8 @@ NewButtonVis = function(_)
 	let varName, title, suffix, btnChoices;
 
 	const Refs = CACHE.get('NBV_Refs');
+	if (!Refs)
+		throw Error("Button visibility references missing");
 	if (_ === 'HideNewButtons')
 	{
 		varName = '$newHiddenButtons';
@@ -357,6 +379,9 @@ NewButtonVis = function(_)
 		suffix = "shown";
 		btnChoices = Refs.Hidden;
 	}
+
+	if (!IsArr(btnChoices) || btnChoices.isEmpty())
+		Cancel("No buttons available to be " + suffix);
 
 	$$(_, 4.2, `Retrieve the user's selection`)
 	const selection = Exe.GetUserInput(varName, D_MultiChoice, title, "Choose the buttons to be " + suffix, [], {choices: btnChoices});

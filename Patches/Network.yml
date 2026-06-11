@@ -92,13 +92,6 @@ CustomNW:
             author : Andrei Karas (4144)
             desc : Update the version to send the clients flag to server. Helps to avoid flag incongruency between client & server.
             
-        - HidePacketsFromPEEK:
-            title : Hide packets from PEEK & BPE
-            recommend : no
-            author : Andrei Karas (4144) , X-EcutiOnner
-            desc : Disable PEEK & BPE tools from discovering the essentials needed to track/extract packets.
-
-
 CustomEncKeys:
     title : ENCRYPTION KEY CUSTOMIZATION
     mutex : false

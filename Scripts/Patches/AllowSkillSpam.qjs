@@ -22,9 +22,9 @@
 * *
 |**************************************************************************|
 * *
-* Author(s)     : Functor, Andrei (4144), Neo-Mind                       *
+* Author(s)     : Functor, Andrei (4144), Neo-Mind, Victor Hugo          *
 * Created Date  : 2020-11-22                                             *
-* Last Modified : 2024-08-08                                             *
+* Last Modified : 2026-06-10                                             *
 * *
 \**************************************************************************/
 
@@ -94,13 +94,30 @@ AllowSkillSpam = function(_)
 			}
 		}
 
+		let cmp74 = null;
+		let modernRefreshHook = -1;
 		if (addr < 0)
+		{
+			$$(_, 3.2, `Fallback to the 2026 variant with a direct 7F4 branch sequence`)
+			modernRefreshHook = Exe.FindHex(
+				"0F B7 F3 "
+			+	"8B C6 "
+			+	"2D F4 07 00 00 74 ?? "
+			+	"2D A4 11 00 00 74 ?? "
+			+	"83 E8 31 74"
+			);
+		}
+
+		if (addr < 0 && modernRefreshHook < 0)
 			throw Error("New Pattern not found");
 
-		$$(_, 3.2, `Extract the comparison`)
-		const cmp74 = Instr.FromAddr(addr);
+		if (addr > 0)
+		{
+			$$(_, 3.3, `Extract the comparison`)
+			cmp74 = Instr.FromAddr(addr);
+		}
 
-		$$(_, 3.3, `Find the code where the comparison with the virtual_key_code is made`)
+		$$(_, 3.4, `Find the code where the comparison with the virtual_key_code is made`)
 		code =
 			TEST(R32, R32)
 		+	JZ(WCp)
@@ -125,56 +142,89 @@ AllowSkillSpam = function(_)
 			throw Error("virtual_key_code reference missing");
 
 		let rcmp;
+		let modernUsePrevCompare = false;
 		if (!isModernReorder) {
-			$$(_, 3.4, `Extract the first 4 instructions`)
+			$$(_, 3.5, `Extract the first 4 instructions`)
 			const test0 = Instr.FromAddr(addr2);
 			let jz1 = test0.getNext();
 			rcmp = jz1.getNext();
 			let jz2 = rcmp.getNext();
 
-			$$(_, 3.5, `Update the jumps`)
+			$$(_, 3.6, `Update the jumps`)
 			jz1.Immd -= (rcmp.Size + jz2.Size);
 			jz2.Immd += (test0.Size + jz1.Size);
 
-			$$(_, 3.6, `Reorder and apply`)
+			$$(_, 3.7, `Reorder and apply`)
 			Exe.SetHex(addr2, rcmp + jz2 + test0 + jz1);
 		} else {
-			$$(_, 3.4, `Extract modern instructions`)
+			$$(_, 3.5, `Extract modern instructions`)
 			const cmp0 = Instr.FromAddr(addr2);
 			let jz1 = cmp0.getNext();
 			rcmp = jz1.getNext();
 			let jz2 = rcmp.getNext();
 
-			$$(_, 3.5, `Update modern jumps`)
+			if (modernRefreshHook > 0)
+			{
+				$$(_, 3.6, `Use prevSkill directly in the 2026 reorder path because lastSkill no longer rearms reliably`)
+				rcmp.Disp += 4;
+				modernUsePrevCompare = true;
+			}
+
+			$$(_, 3.7, `Update modern jumps`)
 			jz1.Immd -= (rcmp.Size + jz2.Size);
 			jz2.Immd += (cmp0.Size + jz1.Size);
 
-			$$(_, 3.6, `Reorder modern and apply`)
+			$$(_, 3.8, `Reorder modern and apply`)
 			Exe.SetHex(addr2, rcmp + jz2 + cmp0 + jz1);
 		}
 
-		$$(_, 3.7, `Extract the target address`)
-		const tgt = rcmp.Disp;
-
-		$$(_, 4.1, `Construct the new function`)
-		code =
-			PUSH_EAX
-		+	MOV(EAX, [tgt + 4])
-		+	MOV([tgt], EAX)
-		+	POP_EAX
-		+	cmp74
-		+	RETN()
-		;
-
-		$$(_, 4.2, `Prepare the arguments for auto-hook`)
-		const args =
+		if (cmp74 !== null)
 		{
-			isCall: true,
-			nops: cmp74.Size - 5
-		};
+			$$(_, 3.9, `Extract the target address`)
+			const tgt = rcmp.Disp;
 
-		$$(_, 4.3, `Add our code and call it from the original comparison address`)
-		AutoHook(cmp74.Addr, code, args);
+			$$(_, 4.1, `Construct the new function`)
+			code =
+				PUSH_EAX
+			+	MOV(EAX, [tgt + 4])
+			+	MOV([tgt], EAX)
+			+	POP_EAX
+			+	cmp74
+			+	RETN()
+			;
+
+			$$(_, 4.2, `Prepare the arguments for auto-hook`)
+			const args =
+			{
+				isCall: true,
+				nops: cmp74.Size - 5
+			};
+
+			$$(_, 4.3, `Add our code and call it from the original comparison address`)
+			AutoHook(cmp74.Addr, code, args);
+		}
+		else if (modernRefreshHook > 0 && !modernUsePrevCompare)
+		{
+			$$(_, 3.8, `Hook the 2026 7F4 compare and refresh the tracked skill id like the donor client`)
+			const tgt = rcmp.Disp;
+			const hookAddr = modernRefreshHook + 5; // points at `sub eax, 0x7F4`
+
+			code =
+				PUSH_EAX
+			+	MOV(EAX, [tgt + 4])
+			+	MOV([tgt], EAX)
+			+	POP_EAX
+			+	SUB(EAX, 0x7F4)
+			+	RETN();
+
+			const args =
+			{
+				isCall: true
+			};
+
+			$$(_, 4.1, `Add our code and redirect the original 7F4 compare to it`)
+			AutoHook(hookAddr, code, args);
+		}
 	}
 
 	return true;

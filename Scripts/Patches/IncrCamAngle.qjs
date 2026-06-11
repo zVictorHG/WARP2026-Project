@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shinryo                                                *
+*   Author(s)     : Shinryo, Victor Hugo                                   *
 *   Created Date  : 2020-11-06                                             *
-*   Last Modified : 2024-08-09                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -109,7 +109,15 @@ IncrCamAngle = function(_)
 			angleAddr = Exe.FindHex(code, addr, addr + 0x800);
 		}
 		if (angleAddr < 0)
-			throw Error("Angle assignment missing");
+		{
+			code = "8B 86 ?? ?? ?? ?? C7 80 F0 03 00 00 00 00 A0 41";
+			angleAddr = Exe.FindHex(code);
+			if (angleAddr < 0)
+				throw Error("Angle assignment missing");
+
+			Exe.SetFloat(angleAddr + code.byteCount() - 4, this.Data.get(_));
+			return true;
+		}
 
 		$$(_, 2.5, `Set angleAddr to the memory location assigned`)
 		angleAddr += code.byteCount() - 4;

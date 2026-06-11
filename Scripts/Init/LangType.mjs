@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2021-08-20                                             *
-*   Last Modified : 2024-08-01                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -85,6 +85,50 @@ export function load()
 	$$(_, 1.3, `Initialize [Valid] to false`)
 	Valid = false;
 
+	function ResolveNewerLangSlot()
+	{
+		const anchors =
+		[
+			{ code : `B8 77 02 00 00 66 89 85 ?? ?? ?? ?? A1 ?? ?? ?? ??`, immOff : 13 },
+			{ code : `B8 77 02 00 00 66 89 45 ?? A1 ?? ?? ?? ??`,             immOff : 10 },
+			{ code : `B8 64 00 00 00 66 89 85 ?? ?? ?? ?? A1 ?? ?? ?? ??`, immOff : 13 },
+			{ code : `B8 64 00 00 00 66 89 45 ?? A1 ?? ?? ?? ??`,             immOff : 10 },
+			{ code : `B8 0E 0C 00 00 66 89 85 ?? ?? ?? ?? A1 ?? ?? ?? ??`, immOff : 13 },
+			{ code : `B8 0E 0C 00 00 66 89 45 ?? A1 ?? ?? ?? ??`,             immOff : 10 },
+		];
+
+		const candidates = [];
+		for (const anchor of anchors)
+		{
+			const at = Exe.FindHex(anchor.code);
+			if (at >= 0)
+				candidates.push(Exe.GetUint32(at + anchor.immOff));
+		}
+
+		if (candidates.isEmpty())
+			return -1;
+
+		let bestAddr = -1;
+		let bestCount = -1;
+		for (const candidate of candidates)
+		{
+			const packed = candidate.toHex(4);
+			let readCount = Exe.FindHexN("A1 " + packed).length;
+			for (const r of [0, 1, 2, 3, 5, 6, 7])
+			{
+				const modrm = ((r << 3) | 0x05).toString(16).padStart(2, "0").toUpperCase();
+				readCount += Exe.FindHexN("8B " + modrm + " " + packed).length;
+			}
+			if (readCount > bestCount)
+			{
+				bestAddr = candidate;
+				bestCount = readCount;
+			}
+		}
+
+		return bestAddr;
+	}
+
 	$$(_, 1.4, `Find the string 'america'`)
 	let strAddr = Exe.FindText("america");
 	let addr;
@@ -134,14 +178,28 @@ export function load()
 
 		addr = Exe.FindHex(code);
 		if (addr < 0)
-			throw Log.rise(ErrMsg = new Error(`${self} - 'america' not found in parts`));
+		{
+			$$(_, '2.1.1', `Find newer service type slot without the 'america' string`)
+			Value = ResolveNewerLangSlot();
+			if (Value < 0)
+				throw Log.rise(ErrMsg = new Error(`${self} - 'america' not found in parts`));
+
+			Hex = Value.toHex(4);
+			return Log.rise(Valid = true);
+		}
 
 		$$(_, 2.2, `Move addr to location after the code`)
 		addr += code.byteCount();
 	}
 	else
 	{
-		throw Log.rise(ErrMsg = new Error(`${self} - 'america' not found`));
+		$$(_, 2.3, `Find newer service type slot without the 'america' string`)
+		Value = ResolveNewerLangSlot();
+		if (Value < 0)
+			throw Log.rise(ErrMsg = new Error(`${self} - 'america' not found`));
+
+		Hex = Value.toHex(4);
+		return Log.rise(Valid = true);
 	}
 
 	$$(_, 3.1, `Find an assignment to g_serviceType after it`)

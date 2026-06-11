@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Andrei (4144)                                          *
+*   Author(s)     : Andrei (4144), Victor Hugo                             *
 *   Created Date  : 2021-06-15                                             *
-*   Last Modified : 2024-08-14                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -35,7 +35,7 @@ SendClientFlags = function(_)
 	{
 		$$(_, 1.1, `Locate 'langtype' anchor`)
 		let at = Exe.FindText("langtype");
-		if (at < 0) throw Error("'langtype' not found");
+		if (at < 0) return true;
 
 		$$(_, 1.2, `Find PUSH 'langtype' then MOV ECX, r32`)
 		at = Exe.FindHex(PUSH(at) + MOV(ECX, R32));

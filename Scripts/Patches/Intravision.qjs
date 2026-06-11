@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Secret, A.K.M., Neo-Mind                               *
+*   Author(s)     : Secret, A.K.M., Neo-Mind, Victor Hugo                  *
 *   Created Date  : 2020-11-12                                             *
-*   Last Modified : 2024-08-12                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -46,7 +46,9 @@ Intravision = function(_)
 	}
 	else
 	{
-		const imm8A = (Exe.BuildDate >= 20120700 || (ROC.IsRenewal && Exe.BuildDate >= 20120300 )) ? ' [00010.00]' : ' 0C';
+		const imm8A = Exe.BuildDate >= 20250000
+			? WCp
+			: (Exe.BuildDate >= 20120700 || (ROC.IsRenewal && Exe.BuildDate >= 20120300 )) ? ' [00010.00]' : ' 0C';
 		parts =
 		[
 			Exe.BuildDate > 20210200 ? JZ(WCp) : JZ(ALLWC) //jz _next

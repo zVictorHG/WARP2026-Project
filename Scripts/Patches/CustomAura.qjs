@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shinryo, Neo-Mind                                      *
+*   Author(s)     : Shinryo, Neo-Mind, Victor Hugo                         *
 *   Created Date  : 2020-11-10                                             *
-*   Last Modified : 2024-08-08                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -336,10 +336,15 @@ CustomAuraLimits = function(_)
 
 		addr = Exe.FindHex(code, addr + 0x20, addr + 0x250);
 		if (addr < 0)
-			throw Error("Zero assignment missing");
-
-		$$(_, 3.9, `Save it as AssgnZero`)
-		AssgnZero = Instr.FromAddr(addr);
+		{
+			$$(_, 3.9, `Zero assignment is not present in this client; keep exit path without it`)
+			AssgnZero = '';
+		}
+		else
+		{
+			$$(_, 3.9, `Save it as AssgnZero`)
+			AssgnZero = Instr.FromAddr(addr);
+		}
 
 		$$(_, 3.10, `Setup AuraConsts & PUSH0s`)
 		AuraConsts = [' 7D', ' 93', ' 92', ' 96'];

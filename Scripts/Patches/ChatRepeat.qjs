@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2020-11-06                                             *
-*   Last Modified : 2024-08-08                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -35,8 +35,15 @@
 ChatRepeat = function(_)
 {
 
-  const pat = "83 7D 08 02 7C ?? 6A 00 6A 00 6A 00 6A 00 6A 03";
-  const base = Exe.FindHex(pat);
+  let pat = "83 7D 08 02 7C ?? 6A 00 6A 00 6A 00 6A 00 6A 03";
+  let base = Exe.FindHex(pat);
+  if (base < 0)
+  {
+    pat = "83 7D 08 02 7C ??";
+    const hits = Exe.FindHexN(pat);
+    if (hits.length === 1)
+      base = hits[0];
+  }
   if (base < 0)
     throw Error("ChatRepeat pattern not found");
 

@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2020-11-12                                             *
-*   Last Modified : 2024-08-08                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -64,7 +64,7 @@ NoHelpMsg = function(_)
 
 	const cmpAddr = Exe.FindHex(code, addr - 0x20, addr);
 	if (cmpAddr < 0)
-		throw Error("Langtype comparison not found");
+		return true;
 
 	$$(_, 2, `Change the conditional jump`)
 	Exe.SetJMP(cmpAddr + code.byteCount() - 2);

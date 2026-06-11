@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : CH.C (jchcc)                                           *
+*   Author(s)     : CH.C (jchcc), Victor Hugo                              *
 *   Created Date  : 2021-06-10                                             *
-*   Last Modified : 2024-08-08                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -37,6 +37,30 @@ OpenToServiceSelect = function(_)
 	if (addr < 0)
 		throw Error("MsgString ID Missing");
 
+	$$(_, 1.2, `Try the 2026 login UI + state-table pair first`)
+	const uiCode2026 =
+		`05 47 FF FF FF`
+	+	` 3D AF 00 00 00`
+	+	` 0F 87 ?? ?? ?? ??`
+	+	` 0F B6 80 ?? ?? ?? ??`
+	+	` FF 24 85 ?? ?? ?? ??`;
+	let Patched2026 = false;
+	const uiAddr2026 = Exe.FindHex(uiCode2026, addr - 0x500, addr);
+	if (uiAddr2026 >= 0)
+	{
+		$$(_, 1.3, `Patch the 2026 UILoginWnd::SendMsg switch entry for the Opening button`)
+		const uiIdxTblVir = Exe.GetUint32(uiAddr2026 + 19);
+		const uiIdxTblPhy = Exe.Vir2Phy(uiIdxTblVir, CODE);
+		if (uiIdxTblPhy >= 0)
+		{
+			Exe.SetInt8(uiIdxTblPhy + 100, 0);
+			Patched2026 = true;
+		}
+	}
+
+	if (Patched2026)
+		return true;
+
 	$$(_, 1.2, `Find the switch table inside UILoginWnd::SendMsg before it`)
 	const code =
 		MOVZX(EAX, BYTE_PTR, [EAX, POS4WC])  //movzx eax, byte ptr [eax + idxTbl]
@@ -45,7 +69,9 @@ OpenToServiceSelect = function(_)
 
 	addr = Exe.FindHex(code, addr - 0x300, addr);
 	if (addr < 0)
+	{
 		throw Error("Switch table missing");
+	}
 
 	$$(_, 2.1, `Extract the idxTbl`)
 	const idxTbl = Exe.GetInt32(addr + 3);

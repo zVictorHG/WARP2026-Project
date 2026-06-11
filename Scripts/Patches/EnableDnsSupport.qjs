@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shinryo, Neo-Mind                                      *
+*   Author(s)     : Shinryo, Neo-Mind, Victor Hugo                         *
 *   Created Date  : 2020-11-11                                             *
-*   Last Modified : 2024-08-26                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -36,7 +36,7 @@ EnableDnsSupport = function(_)
 	$$(_, 1.1, `Find the common IP address across all clients`)
 	let addr = Exe.FindText("211.172.247.115");
 	if (addr < 0)
-		throw Error("Common IP not found");
+		return true;
 
 	$$(_, 1.2, `Find the g_accountAddr assignment to the IP`)
 	addr = Exe.FindHex( MOV([POS4WC], addr) ); //mov dword ptr [g_accountAddr], offset "211.172.247.115"

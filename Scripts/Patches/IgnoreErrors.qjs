@@ -23,9 +23,10 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shinryo, Andrei (4144), X-EcutiOnner, Ai4rei/AN        *
+*   Author(s)     : Shinryo, Andrei (4144), X-EcutiOnner, Ai4rei/AN,        *
+*                   Victor Hugo                                            *
 *   Created Date  : 2020-11-10                                             *
-*   Last Modified : 2023-08-26                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -38,6 +39,8 @@ IgnoreRsrcErr = function(_)
 {
 	$$(_, 1.1, `Find the common error string`)
 	let addr = Exe.FindText("Failed to load Winsock library!");
+	if (addr < 0)
+		addr = Exe.FindText("Failed to setup select mode");
 	if (addr < 0)
 		throw Error("Winsock error string missing");
 
@@ -300,7 +303,36 @@ IgnoreEntryQueueErr = function(_)
 		addr = Exe.FindHex(parts);
 	}
 	if (addr < 0)
-		throw Error("Pattern not found");
+	{
+		$$(_, 1.15, `Fallback to the 2026 EntryQueue MessageBoxA error block`)
+		const failBlock =
+			`6A 30`
+		+	` 68 ?? ?? ?? ??`
+		+	` ` + PUSH(this.BexAddr)
+		+	` 6A 00`
+		+	` FF 15 ?? ?? ?? ??`;
+
+		const failAddr = Exe.FindHex(failBlock);
+		if (failAddr < 0)
+			throw Error("Pattern not found");
+
+		$$(_, 1.3, `Add the error string`)
+		const [, strAddr] = Exe.AddText("EntryQueue Loading Failed");
+
+		$$(_, 2.1, `Get the OutputDebugStringA function address`)
+		ROC.findImports();
+
+		$$(_, 2.2, `Prepare the replacement code (CALLs OutputDebugStringA instead)`)
+		let code =
+			PUSH(strAddr)
+		+	CALL([ROC.OutDbgStrA])
+		+	XOR(EAX, EAX);
+		code += NOPs(failBlock.byteCount() - code.byteCount());
+
+		$$(_, 2.3, `Now replace it`)
+		Exe.SetHex(failAddr, code);
+		return true;
+	}
 
 	$$(_, 1.2, `Calculate the positional addresses`)
 	const addrs = MapAddrs(addr, parts);

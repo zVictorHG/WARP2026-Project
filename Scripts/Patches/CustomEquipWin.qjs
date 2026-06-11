@@ -23,9 +23,10 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Functor, CH.C (jchcc), Andrei (4144), X-EcutiOnner     *
+*   Author(s)     : Functor, CH.C (jchcc), Andrei (4144), X-EcutiOnner,    *
+*                   Victor Hugo                                            *
 *   Created Date  : 2020-11-11                                             *
-*   Last Modified : 2024-08-26                                             *
+*   Last Modified : 2026-06-10                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -133,17 +134,18 @@ NoEquipWinTitle = function(_)
 		Exe.SetUint8(addr, 0xEB); // JNZ → JMP
 
 		let prefix2 =
-			MOV(EDX, [ESI, 0x100])
-		+	CMP(ECX, 0x02)
-		+	MOV([ESI, 0xD0], ECX)
-		+	MOV(ECX, EDX)
-		+	MOV(EAX, [EDX])
-		+	MOV(EAX, [EAX, 0x38]);
+			`8B 96 ?? ?? ?? ??`
+		+	` 83 F9 02`
+		+	` 89 8E ?? ?? ?? ??`
+		+	` 8B CA`
+		+	` 8B 02`
+		+	` 8B 40 38`;
 
 		const tgt = Exe.FindHex(prefix2);
 		if (tgt < 0)
 			throw Error("Pattern#2 not found");
 
+		const tabCtrlOff = Exe.GetUint32(tgt + 2);
 		const ret_phy = tgt + 6;
 		const ret_va  = Exe.Phy2Vir(ret_phy, CODE);
 
@@ -153,7 +155,7 @@ NoEquipWinTitle = function(_)
 		+	INC(ECX)
 		+	JMP(0x04)
 		+	WCp + WCp + WCp + WCp
-		+	MOV(EDX, [ESI, 0x100])
+		+	MOV(EDX, [ESI, tabCtrlOff])
 		+	JMP(0x03)
 		+	WCp + WCp + WCp
 		+	PUSH(ret_va)

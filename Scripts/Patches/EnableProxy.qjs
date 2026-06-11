@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Ai4rei/AN, Neo-Mind                                    *
+*   Author(s)     : Ai4rei/AN, Neo-Mind, Victor Hugo                       *
 *   Created Date  : 2020-11-12                                             *
-*   Last Modified : 2024-08-09                                             *
+*   Last Modified : 2026-06-11                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -150,30 +150,63 @@ EnableProxy = function(_)
 		;
 
 	$$(_, 3.1, `Construct our function (IP saver code)`)
-	code =
-		ALL00                   // ; g_saveIP
-	+	MOV(EAX, [Filler(1)])   //mov eax, dword ptr [g_saveIP]
-	+   TEST(EAX, EAX)          //test eax, eax
-	+   JNZ(0x08)               //jnz short _skip
-	+   MOV(EAX, [refReg, 0xC]) //mov eax, dword ptr [refReg + 0C] ; usually ESI
-	+   MOV([Filler(1)], EAX)   //mov dword ptr [g_saveIP], EAX
-	+   MOV([refReg, 0xC], EAX) //MOV dword ptr [refReg + 0C], EAX <- _skip
-	+	(indirectCALL
-	?
-		JMP([connAddr])         //jmp dword ptr [<&WS2_32.connect>]
-	:                           //  OR
-		JMP(Filler(2))          //jmp <&WS2_32.connect>; will be filled later since we need relative addr
-	);
+	let selectedServiceAddr = -1;
+	if (Exe.BuildDate >= 20260101)
+	{
+		const selectedServicePhy = Exe.FindHex(`89 B3 48 6F 00 00 56 89 35 ?? ?? ?? ?? E8 ?? ?? ?? ?? A1 ?? ?? ?? ??`);
+		if (selectedServicePhy >= 0)
+			selectedServiceAddr = Exe.GetUint32(selectedServicePhy + 9);
+	}
+
+	if (selectedServiceAddr >= 0)
+	{
+		code =
+			ALL00
+		+	ALLFF
+		+	MOV(ECX, [selectedServiceAddr])
+		+	CMP(ECX, [Filler(2)])
+		+	JNZ(0x09)
+		+	MOV(EAX, [Filler(1)])
+		+	TEST(EAX, EAX)
+		+	JNZ(0x0E)
+		+	MOV(EAX, [refReg, 0xC])
+		+	MOV([Filler(1)], EAX)
+		+	MOV([Filler(2)], ECX)
+		+	MOV([refReg, 0xC], EAX)
+		+	(indirectCALL
+		?
+			JMP([connAddr])
+		:
+			JMP(Filler(3))
+		);
+	}
+	else
+	{
+		code =
+			ALL00                   // ; g_saveIP
+		+	MOV(EAX, [Filler(1)])   //mov eax, dword ptr [g_saveIP]
+		+   TEST(EAX, EAX)          //test eax, eax
+		+   JNZ(0x08)               //jnz short _skip
+		+   MOV(EAX, [refReg, 0xC]) //mov eax, dword ptr [refReg + 0C] ; usually ESI
+		+   MOV([Filler(1)], EAX)   //mov dword ptr [g_saveIP], EAX
+		+   MOV([refReg, 0xC], EAX) //MOV dword ptr [refReg + 0C], EAX <- _skip
+		+	(indirectCALL
+		?
+			JMP([connAddr])         //jmp dword ptr [<&WS2_32.connect>]
+		:                           //  OR
+			JMP(Filler(2))          //jmp <&WS2_32.connect>; will be filled later since we need relative addr
+		);
+	}
 
 	$$(_, 3.2, `Prepare the arguments for auto-hook`)
 	const args =
 	{
 		snap : 1,
-		localVals : {1 : 0},         //g_saveIP
-		targets : {2 : connAddr},
+		localVals : selectedServiceAddr >= 0 ? {1 : 0, 2 : 4} : {1 : 0}, //g_saveIP, g_saveSelected
+		targets : selectedServiceAddr >= 0 ? {3 : connAddr} : {2 : connAddr},
 		isCall : true,
 		nops : indirectCALL ? 1 : 0, //need a NOP for indirect CALL since we are converting it to a direct one
-		jcOffset : 4                 //code starts 4 bytes afterwards
+		jcOffset : selectedServiceAddr >= 0 ? 8 : 4
 	};
 
 	$$(_, 3.3, `Add our code and redirect the connect call to use it instead`)
