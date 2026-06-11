@@ -23,9 +23,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Ai4rei/AN, Neo-Mind, Andrei (4144), Jchcc              *
+*   Author(s)     : Ai4rei/AN, Neo-Mind, Andrei (4144), Jchcc, Victor Hugo *
 *   Created Date  : 2020-11-10                                             *
-*   Last Modified : 2023-08-26                                             *
+*   Last Modified : 2026-06-11                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -83,13 +83,52 @@ NoPacketEncr = function(_)
 			Warp.SetPatchState(name, false);
 	}
 
-	$$(_, 1.2, `Ensure the PACKET object has been loaded with valid data`)
+	if (Exe.BuildDate >= 20250000)
+	{
+		$$(_, 1.2, `Find the SSE key broadcast used by the modern packet queue encryptors`)
+		const sseCode =
+			"0F BE C0"              // movsx eax, al
+		+	" 66 0F 6E C0"          // movd xmm0, eax
+		+	" 8B C1"                // mov eax, ecx
+		+	" 66 0F 60 C0"          // punpcklbw xmm0, xmm0
+		+	" 66 0F 61 C0"          // punpcklwd xmm0, xmm0
+		+	" 66 0F 70 D0 00"       // pshufd xmm2, xmm0, 0
+		;
+		const sseAddrs = Exe.FindHexN(sseCode);
+		if (sseAddrs.length < 2)
+			throw Error("Modern packet encryptor prefix missing");
+
+		$$(_, 1.3, `Zero the broadcast key so the SIMD path becomes a plain copy`)
+		for (const addr of sseAddrs)
+			Exe.SetHex(addr, XOR(EAX, EAX) + NOP);
+
+		$$(_, 1.4, `Find the byte-wise XOR loop used for the tail bytes in both queue variants`)
+		const tailCode =
+			"8A 04 32"              // mov al, byte ptr [edx + esi]
+		+	" 32 C4"                // xor al, ah
+		+	" 88 84 35 F0 EF FF FF" // mov byte ptr [ebp + esi - 1010h], al
+		+	" 46"                   // inc esi
+		+	" 3B F1"                // cmp esi, ecx
+		+	" 7C EF"                // jl short _loop
+		;
+		const tailAddrs = Exe.FindHexN(tailCode);
+		if (tailAddrs.length < 2)
+			throw Error("Modern packet encryptor tail loop missing");
+
+		$$(_, 1.5, `NOP the byte-wise XOR so the remainder path also stays unencrypted`)
+		for (const addr of tailAddrs)
+			Exe.SetNOPs(addr + 3, 2);
+
+		return true;
+	}
+
+	$$(_, 2.1, `Ensure the PACKET object has been loaded with valid data`)
 	PACKET.load();
 
 	// Now we diverge a little based on how the keys are assigned.
 	if (PACKET.KS_Type === PACKET.Pusher)
 	{
-		$$(_, 2.1, `Find the Packet Encryption CALL (may or may not be PACKET.KeySetter)`)
+		$$(_, 3.1, `Find the Packet Encryption CALL (may or may not be PACKET.KeySetter)`)
 		const code =
 			PACKET.MovECX    //mov ecx, dword ptr [KeyAddr]
 		+	CALL()			 //call CRagConnection::Encryptor
@@ -99,16 +138,16 @@ NoPacketEncr = function(_)
 		if (addr < 0)
 			throw Error("Encryption CALL not found");
 
-		$$(_, 2.2, `Change the MOV & CALL to EAX = 0 followed by NOPs (internally could be JMP to skip over code)`)
+		$$(_, 3.2, `Change the MOV & CALL to EAX = 0 followed by NOPs (internally could be JMP to skip over code)`)
 		Exe.SetHex(addr, XOR(EAX, EAX));
 		Exe.SetNOPs(addr + 2, code.byteCount() + 2);
 	}
 	else
 	{
-		$$(_, 3.1, `Retrieve the PHYSICAL address of the KeySetter (which serves as the obfuscator/encryptor as well)`)
+		$$(_, 4.1, `Retrieve the PHYSICAL address of the KeySetter (which serves as the obfuscator/encryptor as well)`)
 		const addr = Exe.Vir2Phy(PACKET.KeySetter, CODE);
 
-		$$(_, 3.2, `Change it to EAX = 0 and RETN 4. It will affect all the CALLs but it shouldnt matter`)
+		$$(_, 4.2, `Change it to EAX = 0 and RETN 4. It will affect all the CALLs but it shouldnt matter`)
 		Exe.SetHex(addr, XOR(EAX, EAX) + RETN(4));
 	}
 
@@ -118,7 +157,33 @@ NoPacketEncr = function(_)
 ///
 /// \brief Disable for unsupported clients
 ///
-NoPacketEncr.validate = HasPktKeys;
+NoPacketEncr.validate = () =>
+{
+	if (Exe.BuildDate >= 20250000)
+	{
+		return (
+			Exe.FindHexN(
+				"0F BE C0 66 0F 6E C0 8B C1 66 0F 60 C0 66 0F 61 C0 66 0F 70 D0 00"
+			).length >= 2 &&
+			Exe.FindHexN(
+				"8A 04 32 32 C4 88 84 35 F0 EF FF FF 46 3B F1 7C EF"
+			).length >= 2
+		);
+	}
+
+	if (!HasPktKeys())
+		return false;
+
+	try
+	{
+		PACKET.load();
+		return true;
+	}
+	catch (_)
+	{
+		return false;
+	}
+};
 
 ///
 /// \brief Disable usage of Packet obfuscation for Login & Char packets in latest clients
@@ -141,7 +206,14 @@ NoEncrForLC = function(_)
 		addr = Exe.FindHex(parts);
 	}
 	if (addr < 0)
+	{
+		if (Exe.BuildDate >= 20250000)
+		{
+			$$(_, 1.1, `Latest clients already route Login/Char packets through the direct CNetworkSession send path`)
+			return true;
+		}
 		throw Error("Function call missing");
+	}
 
 	addr += parts.byteCount(0);
 
