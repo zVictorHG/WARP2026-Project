@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2020-11-12                                             *
-*   Last Modified : 2024-08-12                                             *
+*   Last Modified : 2026-06-11                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -73,7 +73,7 @@ MoveUpItemCount = function(_)
 			code =
 				PUSH(0xFFFFFF)   //push 0FFFFFFh
 			+	XOR(EAX, EAX)	 //xor eax, eax
-			+	ADD(EDI, 0xF)	 //add edi, 0Fh
+			+	LEA(EDI, [ESI, 0xF]) //lea edi, [esi+0Fh]
 			;
 			break;
 		}
@@ -123,6 +123,7 @@ MoveUpItemCount = function(_)
             break;
         }
     }
+	const cmpCode = code;
 	code += JE(WCp);                          //je short _next ; Common suffix
 
     $$(_, 2.2, `Find the comparison within 50h bytes before one of the patterns`)
@@ -131,12 +132,17 @@ MoveUpItemCount = function(_)
         const found = Exe.FindHex(code, addr - 0x50, addr);
         if (found > 0)
 			return found;
+
+		const already = Exe.FindHex(cmpCode + JMP(WCp), addr - 0x50, addr);
+		if (already > 0)
+			return already;
     });
 	if (cmpAddr < 0)
         throw Error("Comparison not found");
 
     $$(_, 2.3, `Change the conditional jump (JE)`)
-    Exe.SetJMP(cmpAddr + code.byteCount() - 2);
+    if (Exe.GetUint8(cmpAddr + code.byteCount() - 2) !== 0xEB)
+		Exe.SetJMP(cmpAddr + code.byteCount() - 2);
 
     return true;
 };
