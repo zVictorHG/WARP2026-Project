@@ -2,5 +2,5 @@
 /Outputs/
 
 # Ignore root-level config files
-/Settings.yml
+#/Settings.yml
 /LastSession.yml
