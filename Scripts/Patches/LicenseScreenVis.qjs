@@ -23,7 +23,7 @@
 *                                                                          *
 *   Author(s)     : Shinryo, MS, Neo-Mind, Victor Hugo                     *
 *   Created Date  : 2020-11-08                                             *
-*   Last Modified : 2026-06-11                                             *
+*   Last Modified : 2026-06-14                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -171,6 +171,71 @@ HideLicense = function(_)
 		const target = Warp.GetPatchState("SkipServiceSelect")
 			? Exe.GetInt32(jmpTblPhy + 2 * 4)
 			: Exe.GetInt32(jmpTblPhy + 6 * 4);
+
+		if (!Warp.GetPatchState("SkipServiceSelect"))
+		{
+			$$(_, 2.2, `Restore the EULA transition state used by the Select List cancel confirmation`)
+			const [stateTextPhy, stateTextVir] = Exe.Allocate(0x20, 0x10);
+			if (stateTextPhy < 0)
+				throw Error("No free space for hidden license state");
+
+			Exe.SetHex(stateTextPhy, "48 69 64 64 65 6E 20 6C 69 63 65 6E 73 65 00"); // "Hidden license\0"
+
+			const movAbs = (addr, valHex) => " C7 05 " + addr.toHex(4) + " " + valHex;
+			const restoreState =
+				movAbs(0x016CDBA8, stateTextVir.toHex(4))
+			+	movAbs(0x016CDBB8, (0x20).toHex(4))
+			+	movAbs(0x016CDBBC, (0x2F).toHex(4))
+			+	movAbs(0x016CDBC0, "0E 00 00 80")
+			+	CALL(Filler(1))
+			+	JMP(Filler(2))
+			;
+			AutoHook(selectAddr, restoreState,
+			{
+				targets :
+				{
+					1 : Exe.GetTgtAddr(selectAddr + 1),
+					2 : selectVir + 5,
+				},
+			});
+
+			const cleanupCode2026 =
+				`56`
+			+	` 8B F1`
+			+	` E8 ?? ?? ?? ??`
+			+	` 8B CE`
+			+	` E8 ?? ?? ?? ??`
+			+	` 8B CE`
+			+	` E8 ?? ?? ?? ??`
+			+	` B9 A0 3E 31 01`
+			;
+			const cleanupAddr = Exe.FindHex(cleanupCode2026);
+			if (cleanupAddr < 0)
+				throw Error("2026 Select List cleanup missing");
+
+			const preserveCancelPath =
+				`83 3D 30 D4 6C 01 0C`      // cmp dword ptr [CLoginMode::state], 0Ch
+			+	` 75 13`                    // jne _original
+			+	` 83 79 04 01`              // cmp dword ptr [ecx + 4], 1
+			+	` 75 0D`                    // jne _original
+			+	` 83 79 50 02`              // cmp dword ptr [ecx + 50h], 2
+			+	` 75 07`                    // jne _original
+			+	` C7 41 04 02 00 00 00`     // mov dword ptr [ecx + 4], 2
+			+	` 56`                       // push esi
+			+	` 8B F1`                    // mov esi, ecx
+			+	CALL(Filler(1))
+			+	JMP(Filler(2))
+			;
+			AutoHook(cleanupAddr, preserveCancelPath,
+			{
+				targets :
+				{
+					1 : Exe.GetTgtAddr(cleanupAddr + 4),
+					2 : Exe.Phy2Vir(cleanupAddr, CODE) + 8,
+				},
+			});
+		}
+
 		Exe.SetInt32(jmpTblPhy, target);
 		Exe.SetInt32(jmpTblPhy + 4, target);
 		return true;
