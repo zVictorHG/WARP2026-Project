@@ -27,7 +27,7 @@
 *   Author(s)     : Neo-Mind, Jian, Secret, Andrei (4144), X-EcutiOnner,   *
 *                    Skylove, CrazyBebop, Victor Hugo                      *
 *   Created Date  : 2020-11-09                                             *
-*   Last Modified : 2026-06-14                                             *
+*   Last Modified : 2026-06-27                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -687,12 +687,95 @@ CustomPath.Data = MakeMap(
 /// \brief Change the "..\\licence.txt" & the EULA error string reference to user specified file
 ///
 Orig_LicTxt = "..\\licence.txt";
+CustomLicenseTxt_XorBytes = function(text, key1, key2, totalLen)
+{
+	const key = [
+		key1 & 0xFF, (key1 >> 8) & 0xFF, (key1 >> 16) & 0xFF, (key1 >> 24) & 0xFF,
+		key2 & 0xFF, (key2 >> 8) & 0xFF, (key2 >> 16) & 0xFF, (key2 >> 24) & 0xFF
+	];
+	let bytes = [];
+
+	for (let i = 0; i < totalLen; ++i)
+	{
+		const plain = i < text.length ? text.charCodeAt(i) : 0;
+		bytes.push((plain ^ key[i & 7]) & 0xFF);
+	}
+
+	return bytes;
+};
+
+CustomLicenseTxt_Hex = function(bytes, from, count)
+{
+	let hex = [];
+	for (let i = 0; i < count; ++i)
+		hex.push(bytes[from + i].toString(16).padStart(2, '0'));
+	return hex.join(' ');
+};
+
+CustomLicenseTxt_Encoded2026 = function(_)
+{
+	$$(_, 1.1, `Find the 2026 encoded license filename`)
+	const licCode =
+		"C7 45 E0 C3 89 21 7B"  // mov dword ptr [ebp-20h], encrypted bytes
+	+	" C7 45 E4 70 58 32 23"
+	+	" C7 45 E8 8E C2 53 63"
+	+	" 8B 86 C4 A8 00 00"
+	+	" 66 C7 45 EC 61 4F"
+	+	" C6 45 EE 57";
+	const licAddr = Exe.FindHex(licCode);
+	if (licAddr < 0)
+		throw Error(`'${Orig_LicTxt}' encoded block not found`);
+
+	$$(_, 1.2, `Find the 2026 encoded EULA error string`)
+	const eulaCode =
+		"0F 28 05 ?? ?? ?? ??"  // movaps xmm0, [encrypted string part 1]
+	+	" 8B 86 BC B0 00 00"
+	+	" C6 45 C0 FD"
+	+	" 0F 11 45 A0"
+	+	" 0F 28 05 ?? ?? ?? ??" // movaps xmm0, [encrypted string part 2]
+	+	" 0F 11 45 B0";
+	const eulaAddr = Exe.FindHex(eulaCode);
+	if (eulaAddr < 0)
+		throw Error("Encoded EULA string block not found");
+
+	$$(_, 2.1, `Get new Filename from user`)
+	const varName = '$licenseTXT';
+	const newFile = Exe.GetUserInput(varName, D_Text, "License file", "Enter the name of the Txt file", Orig_LicTxt, {minLen: 9, maxLen: 14});
+	if (newFile === false)
+		Cancel("License file", Orig_LicTxt);
+
+	const eulaString = "No EULA text file. (" + newFile.replace("..\\", "") + ")";
+	if (eulaString.length > 32)
+		throw Error("EULA string too long for encoded 2026 block");
+
+	$$(_, 2.2, `Patch the encoded license filename`)
+	const licBytes = CustomLicenseTxt_XorBytes(newFile, 0x177DA7ED, 0x4D573B19, 0x0F);
+	Exe.SetHex(licAddr + 0x03, CustomLicenseTxt_Hex(licBytes, 0x00, 0x04));
+	Exe.SetHex(licAddr + 0x0A, CustomLicenseTxt_Hex(licBytes, 0x04, 0x04));
+	Exe.SetHex(licAddr + 0x11, CustomLicenseTxt_Hex(licBytes, 0x08, 0x04));
+	Exe.SetHex(licAddr + 0x1F, CustomLicenseTxt_Hex(licBytes, 0x0C, 0x02));
+	Exe.SetHex(licAddr + 0x24, CustomLicenseTxt_Hex(licBytes, 0x0E, 0x01));
+
+	$$(_, 2.3, `Patch the encoded EULA error string`)
+	const eulaBytes = CustomLicenseTxt_XorBytes(eulaString, 0x7BDB0BFD, 0x83B73FDF, 0x21);
+	const eulaPart1 = Exe.Vir2Phy(Exe.GetUint32(eulaAddr + 0x03));
+	const eulaPart2 = Exe.Vir2Phy(Exe.GetUint32(eulaAddr + 0x18));
+	if (eulaPart1 < 0 || eulaPart2 < 0)
+		throw Error("Encoded EULA string data not mapped");
+
+	Exe.SetHex(eulaPart1, CustomLicenseTxt_Hex(eulaBytes, 0x00, 0x10));
+	Exe.SetHex(eulaPart2, CustomLicenseTxt_Hex(eulaBytes, 0x10, 0x10));
+	Exe.SetHex(eulaAddr + 0x10, CustomLicenseTxt_Hex(eulaBytes, 0x20, 0x01));
+
+	return true;
+};
+
 CustomLicenseTxt = function(_)
 {
 	$$(_, 1.1, `Find the string '..\\licence.txt'`)
 	let addr = Exe.FindText(Orig_LicTxt, CASE_INSENSITIVE);
 	if (addr < 0)
-		throw Error(`'${Orig_LicTxt}' not found`);
+		return CustomLicenseTxt_Encoded2026(_);
 
 	$$(_, 1.2, `Find where it is assigned`)
 	addr = Exe.FindHex( MOV([POS4WC], addr) ); //MOV DWORD PTR DS:[g_licence], stringAddr
@@ -773,6 +856,7 @@ CustomLicenseTxt = function(_)
 
 	return true;
 };
+
 
 ///
 /// \brief Change the clientinfo.xml reference to custom file specified by user
