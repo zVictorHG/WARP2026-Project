@@ -22,7 +22,7 @@
 *                                                                          *
 *   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2020-11-11                                             *
-*   Last Modified : 2026-06-10                                             *
+*   Last Modified : 2026-06-27                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -71,9 +71,14 @@ EnableFlagEmotes = function()
 		throw Error("Need a mapping of flag constants");
 
 	$$(_ + '3.1 - Prepare code that is part of each case (common portions that we need)')
-	code =
+	let codeLangType =
 		MOV(EAX, [LANGTYPE])  //mov eax, dword ptr [g_serviceType]
 	+   TEST(EAX, EAX)        //test eax, eax
+	;                         //jz short _next OR jz _next
+
+	const codeGenericFlagGate =
+		MOV(EAX, [POS4WC])    //mov eax, dword ptr [g_flagEmoteGate]
+	+	TEST(EAX, EAX)        //test eax, eax
 	;                         //jz short _next OR jz _next
 
 	let code2;
@@ -135,20 +140,24 @@ EnableFlagEmotes = function()
 		;
 	}
 
-	const csize = code.byteCount();
+	const csize = codeLangType.byteCount();
 	const csize2 = code2.byteCount();
+	let patchedCount = 0;
 
 	for (let i = 1; i < 10; i++)
 	{
 		const __ = `${_} [${i}] `;
 
 		$$(__ + '3.2 - Get the starting address of the case')
-		let addr = Exe.Vir2Phy(Exe.GetInt32(jmpTbl + (i - 1) * 4), CODE);
+		const caseAddr = Exe.Vir2Phy(Exe.GetInt32(jmpTbl + (i - 1) * 4), CODE);
+		let addr = caseAddr;
 
 		$$(__ + '3.3 - Find the first code. Ideally it would be at addr itself unless something changed')
-		addr = Exe.FindHex(code, addr, addr + 0x50);
+		addr = Exe.FindHex(codeLangType, caseAddr, caseAddr + 0x50);
 		if (addr < 0)
-			continue;
+			addr = Exe.FindHex(codeGenericFlagGate, caseAddr, caseAddr + 0x50);
+		if (addr < 0)
+			throw Error(`First code missing for No.${i}`);
 
 		$$(__ + '3.4 - Set addr to location after TEST (which should be a JZ)')
 		addr += csize;
@@ -179,7 +188,12 @@ EnableFlagEmotes = function()
 				Exe.SetHex(addr + csize2 - 11, PUSH(FlagMap[FlagSpec[i]]));
 			}
 		}
+
+		patchedCount++;
 	}
+
+	if (patchedCount !== 9)
+		throw Error(`Expected to patch 9 flag emote callers, patched ${patchedCount}`);
 
 	return true;
 };
