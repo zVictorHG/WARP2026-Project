@@ -148,7 +148,7 @@ CustomAutoFollow:
         - DecrAFDelay:
             title : Decrease auto follow delay
             recommend : no
-            author : CH.C (jchcc)
+            author : CH.C (jchcc), Victor Hugo
             desc : Decrease the auto follow delay to user specified value.
 
 CustomAura:

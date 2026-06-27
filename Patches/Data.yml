@@ -421,7 +421,7 @@ CustomPath:
         - CustomLicenseTxt:
             title : Customize License File
             recommend : no
-            author : Neo-Mind
+            author : Neo-Mind, Victor Hugo
             desc : Change the filename used for EULA from <b>..\licence.txt</b> to user specified name (Path is relative to Data folder).
 
         - CustomClientInfo:

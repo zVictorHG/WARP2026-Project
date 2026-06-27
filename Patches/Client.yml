@@ -69,7 +69,7 @@ DisableEffect:
         - NoEarthQuake:
             title : Disable Quake skill effect
             recommend : no
-            author : Ai4rei/AN
+            author : Ai4rei/AN, Victor Hugo
             desc :  Disables the Earthquake skill effect.
         
         - NoWavyScreen:
@@ -317,7 +317,7 @@ CustomSleep:
         - AddInpDelay:
             title : Add Input Delay
             recommend : no
-            author : Andrei Karas (4144)
+            author : Andrei Karas (4144), Victor Hugo
             desc : Adds the user specified value to input delay.
         
         - CustomGameLoopDelay:
