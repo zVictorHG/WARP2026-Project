@@ -1,6 +1,6 @@
 // *********************************************************** \\
 // Author(s)     : Victor Hugo
-// Last Modified : 2026-06-14
+// Last Modified : 2026-06-27
 function RestoreBattlegroundUI()
 {
 	if (CACHE.has('RestoreBattlegroundUI_Applied'))
@@ -165,15 +165,6 @@ function RestoreBattlegroundUI()
 		let GuardSeg1 =
 			CMP([EBP, 0x10], BattlegroundButtonID)
 		+	JNE(Filler(22, 1));
-
-		if (BattlegroundButtonID === 0x178)
-		{
-			GuardSeg1 =
-				CMP([EBP, 0x10], BattlegroundButtonID)
-			+	JE(9)
-			+	CMP([EBP, 0x10], 0xC9)
-			+	JNE(Filler(22, 1));
-		}
 
 		// The 2026 client reports this button as handled once ShowNewButtons
 		// makes it visible, but the original handler still does not open

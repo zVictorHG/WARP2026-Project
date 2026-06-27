@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2021-08-20                                             *
-*   Last Modified : 2024-08-01                                             *
+*   Last Modified : 2026-06-27                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -185,7 +185,30 @@ export function load()
 		}
 	}
 	if (addr < 0)
+	{
+		$$(_, 1.8, `Reference location not found; search for the virtualized key setter body directly`)
+		const keySetterPatterns =
+		[
+			"55 8B EC 83 EC 08 56 57 8B F9 8B 47 10 03 47 0C" +
+			" 8B 4F 08 49 8D 70 FF 8B 47 04 8B D6 C1 EA 02" +
+			" 23 D1 83 E6 03"
+		];
+
+		let matches = [];
+		for (const pattern of keySetterPatterns)
+			matches = matches.concat(Exe.FindHexN(pattern));
+		if (matches.length === 1)
+		{
+			$$(_, 1.9, `Virtualized key setter body found directly`)
+			Assigner = matches[0];
+			KeySetter = Exe.Phy2Vir(Assigner, CODE);
+			KS_Type = Virtual;
+			Keys = [0, 0, 0];
+			return Log.rise(Valid = true);
+		}
+
 		throw Log.rise(ErrMsg = new Error(`${self} - reference location not found`));
+	}
 
 	$$(_, 2.1, `Look for 3 PUSHes followed by a CALL (keys are PUSHed to function)`)
 	let code =
