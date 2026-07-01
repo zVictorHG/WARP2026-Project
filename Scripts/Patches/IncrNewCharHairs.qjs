@@ -1,6 +1,7 @@
 /**************************************************************************\
 *                                                                          *
 *   Copyright (C) 2015-2024 Neo-Mind                                       *
+*   Copyright (C) 2026 CrazyBebop                                          *
 *                                                                          *
 *   This file is a part of WARP project (specific to RO clients)           *
 *                                                                          *
@@ -20,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, CrazyBebop, Victor Hugo                      *
 *   Created Date  : 2021-03-02                                             *
-*   Last Modified : 2024-08-09                                             *
+*   Last Modified : 2026-07-01                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -141,7 +142,31 @@ IncrNewCharHairs = function(_)
 			break;
 		}
 
-		default: //For VC14.16, interface has changed need to research more.
+		case 14:
+		{
+			limits = [0x2C0, 0x380];
+			hcLimit = 8;
+
+			clrLoc = [R32, POS2WC];
+			parts =
+			[
+				MOV(clrLoc, R32)      //mov dword ptr [reg + hcOffset], regA
+			,
+				TEST(EAX, EAX)        //test eax, eax
+			+	JNS(0x0E)             //jns short _skip#1
+			+	MOV(clrLoc, 0)        //mov dword ptr [reg + hcOffset], 0
+			+	XOR(EAX, EAX)         //xor eax, eax
+			+	JMP(0x14)             //jmp short _skip#2
+			+	CMP(EAX, hcLimit)     //cmp eax, <hcLimit>
+			+	JLE(0x0F)             //jle short _skip#3
+			,
+				MOV(clrLoc, hcLimit)  //mov dword ptr [reg + hcOffset], <hcLimit>
+			+	MOV(EAX, hcLimit)     //mov eax, <hcLimit>
+			];
+			break;
+		}
+
+		default:
 			break;
 	}
 
@@ -281,7 +306,28 @@ IncrNewCharHairs = function(_)
 			}
 			break;
 		}
-		default: //VC14.16 uses new interface
+		case 14:
+		{
+			styleLoc = [R32, POS2WC];
+			pat1 =
+			[//0
+				MOV(styleLoc, R32)         //mov dword ptr [reg + hsOffset], regA
+
+			,//1
+				TEST(EAX, EAX)             //test eax, eax
+			+	JNS(0x0E)                  //jns short _skip#1
+			+	MOV(styleLoc, 0)           //mov dword ptr [reg + hsOffset], 0
+			+	XOR(EAX, EAX)              //xor eax, eax
+			+	JMP(0x14)                  //jmp short _skip#2
+			+	CMP(EAX, 0x16)             //cmp eax, 16h
+			+	JLE(0x0F)                  //jle short _skip#3
+			+	MOV(styleLoc, 0x16)        //mov dword ptr [reg + hsOffset], 16h
+			+	MOV(EAX, 0x16)             //mov eax, 16h
+			];
+			break;
+		}
+
+		default:
 			break;
 	}
 
@@ -294,7 +340,9 @@ IncrNewCharHairs = function(_)
 		throw Error("Hair Style comparison missing");
 
 	$$(_, 1.7, `Save the begin & end addresses and the memory location for hair style`)
-	styleLoc[1] = Instr.FromAddr(cmpAddr).Disp;
+	const hsIns = Instr.FromAddr(cmpAddr);
+	styleLoc[0] = hsIns.MRM.getReg('M');
+	styleLoc[1] = hsIns.Disp;
 
 	const [, hsBegin, hsEnd] = MapAddrs(cmpAddr, pat1);
 	let hsAddon = 1;
@@ -326,7 +374,7 @@ IncrNewCharHairs = function(_)
 	if (result === false)
 		Cancel("Limits", hcLimit + " & 22");
 
-	const [hcNewLimit, hsNewLimit] = result;
+	const [hcNewLimit, hsNewLimit] = [Number(result[0]), Number(result[1])];
 
 	if (hcNewLimit !== hcLimit)
 	{
@@ -444,7 +492,7 @@ IncrNewCharHairs.fixSB = function(type, oldLimit, newLimit)
 };
 
 ///
-/// \brief Disable for unsupported clients (VC14.16)
+/// \brief Disable for unsupported clients
 ///
 IncrNewCharHairs.validate = () =>
-	Exe.Version < 14;
+	Exe.Version >= 6;
