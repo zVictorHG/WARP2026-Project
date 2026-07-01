@@ -2,6 +2,7 @@
 *                                                                          *
 *   Copyright (C) 2013 Shakto                                              *
 *   Copyright (C) 2013-2024 Neo-Mind                                       *
+*   Copyright (C) 2026 CrazyBebop                                          *
 *                                                                          *
 *   This file is a part of WARP project (specific to RO clients)           *
 *                                                                          *
@@ -21,9 +22,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Shakto, Neo-Mind, Victor Hugo                          *
+*   Author(s)     : Shakto, Neo-Mind, CrazyBebop, Victor Hugo              *
 *   Created Date  : 2020-11-08                                             *
-*   Last Modified : 2026-06-30                                             *
+*   Last Modified : 2026-07-01                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -68,7 +69,7 @@ CustomEncKeys = function(_)
 
 		$$(_, 2.2, `Update the respective PUSHed key with the new one in all such locations`)
 		for (const addr of Exe.FindHexN(code))
-			Exe.SetInt32(addr + csize - 5*(index + 1), keyVal);
+			Exe.SetFromVar(addr + csize - 5*(index + 1), varName);
 
 		return true;
 	}
@@ -80,11 +81,23 @@ CustomEncKeys = function(_)
 		{
 			if (ins.Disp === 4*(index+1))
 			{
-				Exe.SetInt32(ins.NextAddr - 4, keyVal);
+				Exe.SetFromVar(ins.NextAddr - 4, varName);
 				break;
 			}
 		}
 		return true;
+	}
+	else if (PACKET.KS_Type === PACKET.DirectSend)
+	{
+		$$(_, 2.4, `Load the initial keys to CACHE if not done previously`)
+		const cacheKey = 'PACKET';
+		CACHE.load(cacheKey, this.Members, PACKET.Keys);
+
+		$$(_, 2.5, `Set the key for the patch`)
+		CACHE.setEntry(cacheKey, _, keyVal);
+
+		$$(_, 2.6, `Run the direct-send obfuscation helper`)
+		return this.obfuscateDirectSend(_);
 	}
 	else //Keys are assigned inside ObfuscateOrInit mixed function
 	{
@@ -92,7 +105,7 @@ CustomEncKeys = function(_)
 		const cacheKey = 'PACKET';
 		CACHE.load(cacheKey, this.Members, PACKET.Keys);
 
-	$$(_, 3.2, `Set the key for the patch`)
+		$$(_, 3.2, `Set the key for the patch`)
 		CACHE.setEntry(cacheKey, _, keyVal);
 
 		$$(_, 3.3, `Run the helper function to make the changes in client`)
@@ -102,8 +115,6 @@ CustomEncKeys = function(_)
 
 ///
 /// \brief Convert D_Hex input to the packet key integer.
-///        WARP can restore numeric-only hex input as a number, so parse the
-///        displayed digits as hexadecimal instead of treating them as decimal.
 ///
 CustomEncKeys.normalizeInput = function(value)
 {
@@ -117,25 +128,10 @@ CustomEncKeys.normalizeInput = function(value)
 	return parseInt(text, 16) >>> 0;
 };
 
-///
+/// 
 /// \brief Disable for unsupported clients
 ///
-CustomEncKeys.validate = () =>
-{
-	if (!HasPktKeys())
-		return false;
-
-	try
-	{
-		PACKET.load();
-	}
-	catch (_)
-	{
-		return false;
-	}
-
-	return PACKET.KS_Type !== PACKET.Unknown && PACKET.Keys !== null;
-};
+CustomEncKeys.validate = HasPktKeys;
 
 ///
 /// \brief Clear the key assignment & Re-stage the changes if necessary
@@ -267,6 +263,115 @@ CustomEncKeys.obfuscate = function(patchName)
 			Exe.SetHex(ins.Addr, ins);
 		}
 	}
+
+	return true;
+};
+
+///
+/// \brief Helper function which obfuscates packets on recent direct-send clients.
+///
+CustomEncKeys.obfuscateDirectSend = function(patchName)
+{
+	const _ = `${patchName}.obfuscateDirectSend`;
+
+	$$(_, 1.1, `Add the login/char packet id table used for filtering`)
+	const tbl = [
+		0x64, 0x277, 0x2b0, 0x27c, 0x825,
+		0x1db, 0xacf, 0x200, 0x204,
+
+		0x827, 0x829, 0x82b, 0x65, 0x66,
+		0x68, 0x1fb, 0xa39, 0x187, 0x28d,
+		0x28f, 0x8fc, 0x7e5, 0x7e7, 0x8b8,
+		0x8c5, 0x8be, 0x8ba, 0x8d4, 0x9a1
+	];
+
+	$$(_, 1.2, `Build the direct-send hook`)
+	const cacheKey = 'PACKET';
+	const newKeys = this.Members.map(name => CACHE.entry(cacheKey, name));
+	const tblHex = tbl.map(v => v.toHex(2)).join('');
+	const parts =
+	[//0
+		PUSH(EBP)              //push ebp
+	+	MOV(EBP, ESP)          //mov ebp, esp
+	+	PUSH(EBX)              //push ebx
+	+	PUSH(ESI)              //push esi
+	+	PUSH(EDI)              //push edi
+	+	MOV(EDI, ECX)          //mov edi, ecx
+	+	PUSHAD                 //preserve all registers while mutating packet id
+	+	CMP([EBP, 0x8], 2)     //cmp dword ptr [ARG.1], 2 ; packet length
+	+	JL(Filler(1,1))        //jl short _exit
+	+	MOV(ESI, [EBP, 0xC])   //mov esi, dword ptr [ARG.2] ; packet buffer
+	+	TEST(ESI, ESI)         //test esi, esi
+	+	JE(Filler(2,1))        //je short _exit
+	+	MOV(AX, [ESI])         //mov ax, word ptr [esi]
+	+	MOV(ECX, Filler(10))   //mov ecx, <tblBegin>
+	+	MOV(EDI, Filler(11))   //mov edi, <tblEnd>
+
+	,//1
+		CMP(AX, [ECX])         //cmp ax, word ptr [ecx] ; _loop
+	+	JE(Filler(3,1))        //je short _exit
+	+	ADD(ECX, 2)            //add ecx, 2
+	+	CMP(ECX, EDI)          //cmp ecx, edi
+	+	JL(Filler(4,1))        //jl short _loop
+	+	MOV(ECX, [Filler(12)]) //mov ecx, dword ptr [cryptState]
+	+	TEST(ECX, ECX)         //test ecx, ecx
+	+	JNE(Filler(5,1))       //jne short _crypt
+
+	,//2
+		MOV(ECX, newKeys[0])        //mov ecx, <key1> ; _init
+	+	IMUL(ECX, ECX, newKeys[1])  //imul ecx, ecx, <key2>
+	+	ADD(ECX, newKeys[2])        //add ecx, <key3>
+
+	,//3
+		MOV(EDX, ECX)               //mov edx, ecx ; _crypt
+	+	SHR(EDX, 0x10)              //shr edx, 10h
+	+	AND(EDX, 0x7FFF)            //and edx, 7FFFh
+	+	XOR(AX, DX)                 //xor ax, dx
+	+	MOV([ESI], AX)              //mov word ptr [esi], ax
+	+	IMUL(ECX, ECX, newKeys[1])  //imul ecx, ecx, <key2>
+	+	ADD(ECX, newKeys[2])        //add ecx, <key3>
+	+	MOV([Filler(12)], ECX)      //mov dword ptr [cryptState], ecx
+
+	,//4
+		POPAD                       //popad ; _exit
+	+	JMP(Filler(6))              //jmp original function after copied prologue
+
+	,//5
+		" 00 00 00 00"              //cryptState
+	+	tblHex
+	];
+
+	$$(_, 1.3, `Resolve the local offsets`)
+	const [, _loop, _init, _crypt, _exit, cryptState] = MapAddrs(parts);
+	const tblStart = cryptState + 4;
+	const tblEnd = tblStart + tbl.length * 2;
+
+	$$(_, 2.1, `Enable the tag`)
+	Exe.BeginTag(CACHE.getTag(cacheKey));
+
+	$$(_, 2.2, `Allocate space for the hook`)
+	const [free, freeVir] = CACHE.allocate(cacheKey, 'DirectSend', parts, 0x10);
+
+	$$(_, 2.3, `Finalize and install the hook`)
+	let code = SetFillTargets(parts,
+	{
+		start : freeVir,
+		'1,1' : freeVir + _exit,
+		'2,1' : freeVir + _exit,
+		'3,1' : freeVir + _exit,
+		'4,1' : freeVir + _loop,
+		'5,1' : freeVir + _crypt,
+		6 : PACKET.KeySetter + 8
+	});
+	code = SwapFillers(code,
+	{
+		10 : freeVir + tblStart,
+		11 : freeVir + tblEnd,
+		12 : freeVir + cryptState
+	});
+
+	Exe.SetHex(free, code);
+	Exe.SetJMP(PACKET.Assigner, freeVir, 3);
 
 	return true;
 };

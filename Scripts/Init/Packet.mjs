@@ -22,7 +22,7 @@
 *                                                                          *
 *   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2021-08-20                                             *
-*   Last Modified : 2026-06-27                                             *
+*   Last Modified : 2026-07-01                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -53,6 +53,9 @@ export const Virtual = 3;
 
 /**Function with unknown signature**/
 export const Unknown = 4;
+
+/**Recent clients that no longer expose ObfuscateOrInit and need send-path obfuscation**/
+export const DirectSend = 5;
 
 /**tag name to use for shared changes**/
 export const Tag = 'EncKeys';
@@ -101,7 +104,7 @@ export function init()
 	ErrMsg = null;
 
 	Identify(self, [
-		'Pusher', 'Mover', 'Sharer', 'Virtual', 'Unknown',
+		'Pusher', 'Mover', 'Sharer', 'Virtual', 'Unknown', 'DirectSend',
 		'KeySetter', 'KS_Type', 'MovECX', 'Tag',
 		'Keys', 'Assigner', 'NewKeys',
 		'init', 'load', 'setKey', 'unsetKey', 'allocate'
@@ -186,28 +189,37 @@ export function load()
 	}
 	if (addr < 0)
 	{
-		$$(_, 1.8, `Reference location not found; search for the virtualized key setter body directly`)
-		const keySetterPatterns =
-		[
-			"55 8B EC 83 EC 08 56 57 8B F9 8B 47 10 03 47 0C" +
-			" 8B 4F 08 49 8D 70 FF 8B 47 04 8B D6 C1 EA 02" +
-			" 23 D1 83 E6 03"
-		];
+		$$(_, 1.8, `Reference location not found; try recent direct-send packet path`)
+		const thunk =
+			JMP(POS4WC)
+		+	NOP.repeat(10)
+		;
+		const sendTarget =
+			PUSH(EBP)
+		+	MOV(EBP, ESP)
+		+	PUSH(EBX)
+		+	PUSH(ESI)
+		+	PUSH(EDI)
+		+	MOV(EDI, ECX)
+		+	CALL([POS4WC])
+		+	CMP([EDI, 4], -1)
+		;
 
-		let matches = [];
-		for (const pattern of keySetterPatterns)
-			matches = matches.concat(Exe.FindHexN(pattern));
-		if (matches.length === 1)
+		const matches = [];
+		for (const thunkAddr of Exe.FindHexN(thunk))
 		{
-			$$(_, 1.9, `Virtualized key setter body found directly`)
-			Assigner = matches[0];
-			KeySetter = Exe.Phy2Vir(Assigner, CODE);
-			KS_Type = Virtual;
-			Keys = [0, 0, 0];
-			return Log.rise(Valid = true);
+			const tgt = Exe.GetTgtAddr(thunkAddr + 1, PHYSICAL);
+			if (Exe.FindHex(sendTarget, tgt, tgt + sendTarget.byteCount()) === tgt)
+				matches.push([tgt, Exe.GetTgtAddr(thunkAddr + 1)]);
 		}
 
-		throw Log.rise(ErrMsg = new Error(`${self} - reference location not found`));
+		if (matches.length !== 1)
+			throw Log.rise(ErrMsg = new Error(`${self} - reference location not found`));
+
+		[Assigner, KeySetter] = matches[0];
+		KS_Type = DirectSend;
+		Keys = [0, 0, 0];
+		return Log.rise(Valid = true);
 	}
 
 	$$(_, 2.1, `Look for 3 PUSHes followed by a CALL (keys are PUSHed to function)`)
@@ -378,7 +390,7 @@ export function load()
 ///
 /// \brief Tester
 ///
-const Types = ["Pusher", "Mover", "Sharer", "Virtual", "Unknown"];
+const Types = ["Pusher", "Mover", "Sharer", "Virtual", "Unknown", "DirectSend"];
 export function debug()
 {
 	if (Valid == null)
