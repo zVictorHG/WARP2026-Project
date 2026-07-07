@@ -23,7 +23,7 @@
 *                                                                          *
 *   Author(s)     : Shinryo, Neo-Mind, Victor Hugo                         *
 *   Created Date  : 2020-11-11                                             *
-*   Last Modified : 2026-06-10                                             *
+*   Last Modified : 2026-07-07                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -36,7 +36,7 @@ EnableDnsSupport = function(_)
 	$$(_, 1.1, `Find the common IP address across all clients`)
 	let addr = Exe.FindText("211.172.247.115");
 	if (addr < 0)
-		return true;
+		return EnableDnsSupport.Modern(_);
 
 	$$(_, 1.2, `Find the g_accountAddr assignment to the IP`)
 	addr = Exe.FindHex( MOV([POS4WC], addr) ); //mov dword ptr [g_accountAddr], offset "211.172.247.115"
@@ -171,6 +171,114 @@ EnableDnsSupport = function(_)
 
 	$$(_, 4.5, `Add the code and jump to it from addr`)
 	AutoHook(addr, code, { targets : {1 : assignFunc} });
+
+	return true;
+};
+
+///
+/// \brief Modern clients already have a DNS-aware connection routine, but it
+///        only calls gethostbyname() for address strings containing ':'.
+///        clientinfo.xml supplies address and port separately, so hostnames
+///        like apple.com fall through to inet_addr() and become 255.255.255.255.
+///
+EnableDnsSupport.Modern = function(_)
+{
+	$$(_, 1.1, `Find modern connect routine inet_addr site`)
+	const code =
+		"83 7D ?? 00 "             // cmp dword ptr [ebp-68h], 0
+	+	"74 ?? "                   // je skip_dns
+	+	"6A FF "
+	+	"68 ?? ?? ?? ?? "          // push ":"
+	+	"8D 4D ?? "
+	+	"E8 ?? ?? ?? ?? "
+	+	"83 F8 FF "
+	+	"74 ?? "
+	+	"50 "
+	+	"6A 00 "
+	+	"8D 45 ?? "
+	+	"50 "
+	+	"8D 4D ?? "
+	+	"E8 ?? ?? ?? ?? "
+	+	"C6 45 FC ?? "
+	+	"8D 45 ?? "
+	+	"83 7D ?? 10 "
+	+	"0F 43 45 ?? "
+	+	"50 "
+	+	"FF 15 ?? ?? ?? ?? "       // gethostbyname(substring before ':')
+	+	"85 C0 "
+	+	"74 ?? "
+	+	"8B 40 0C "
+	+	"8B 00 "
+	+	"FF 30 "
+	+	"FF 15 ?? ?? ?? ?? "       // inet_ntoa
+	+	"8B D0 "
+	+	"8D 72 01 "
+	+	"8A 0A "
+	+	"42 "
+	+	"84 C9 "
+	+	"75 ?? "
+	+	"2B D6 "
+	+	"8D 4D ?? "
+	+	"52 "
+	+	"50 "
+	+	"E8 ?? ?? ?? ?? "
+	+	"C6 45 FC ?? "
+	+	"8D 4D ?? "
+	+	"E8 ?? ?? ?? ?? "
+	+	"83 7D ?? 10 "
+	+	"8D 45 ?? "
+	+	"0F 43 45 ?? "
+	+	"50 "
+	+	"FF 15 ?? ?? ?? ?? "       // inet_addr(final address string)
+	+	"8B F0"
+	;
+
+	addr = Exe.FindHex(code);
+	if (addr < 0)
+		throw Error("Modern DNS connect routine not found");
+
+	const inetAddrCall = addr + 0x80;
+	if (Exe.GetUint8(inetAddrCall) !== 0xFF || Exe.GetUint8(inetAddrCall + 1) !== 0x15)
+		throw Error("Modern inet_addr CALL offset mismatch");
+
+	const InetAddr = Exe.GetInt32(inetAddrCall + 2);
+
+	const GetHostByName = Exe.FindFunc("gethostbyname", 52, "ws2_32.dll");
+	if (GetHostByName < 0)
+		throw Error("gethostbyname function not found");
+
+	$$(_, 1.2, `Install inet_addr DNS fallback`)
+	const hook =
+		PUSH([ESP, 4])             // original inet_addr argument
+	+	CALL([InetAddr])           // inet_addr(arg)
+	+	CMP(EAX, -1)
+	+	JZ(0x03)
+	+	RETN(4)
+	+	PUSH([ESP, 4])             // original inet_addr argument
+	+	CALL([GetHostByName])      // gethostbyname(arg)
+	+	TEST(EAX, EAX)
+	+	JNZ(0x08)
+	+	MOV(EAX, -1)
+	+	RETN(4)
+	+	MOV(EAX, [EAX, 0xC])
+	+	TEST(EAX, EAX)
+	+	JNZ(0x08)
+	+	MOV(EAX, -1)
+	+	RETN(4)
+	+	MOV(EAX, [EAX])
+	+	TEST(EAX, EAX)
+	+	JNZ(0x08)
+	+	MOV(EAX, -1)
+	+	RETN(4)
+	+	MOV(EAX, [EAX])
+	+	RETN(4)
+	;
+
+	AutoHook(inetAddrCall, hook,
+	{
+		isCall : true,
+		nops : 1
+	});
 
 	return true;
 };

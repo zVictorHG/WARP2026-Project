@@ -35,7 +35,7 @@ CustomNW:
         - EnableDnsSupport:
             title : Enable DNS support
             recommend : yes
-            author : Shinryo
+            author : Shinryo, Victor Hugo
             desc : Enable DNS support for URL specified in <b>clientinfo.xml</b>.
 
         - SendMD5Hash:
