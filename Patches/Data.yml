@@ -165,12 +165,6 @@ CustomData:
             author : Andrei Karas (4144)
             desc : Hide the actual build info in client by 'NULL' ifying all related values.
         
-        - CustomLoadedDate:
-            title : Customize WARP loaded date
-            recommend : no
-            author : Victor Hugo
-            desc : Changes the PE timestamp used by WARP as the loaded executable date.
-         
         - NoCameraLock:
             title : Disable camera lock
             recommend : no
