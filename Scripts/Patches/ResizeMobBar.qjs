@@ -22,7 +22,7 @@
 *                                                                          *
 *   Author(s)     : CH.C (jchcc), Neo-Mind, Victor Hugo                    *
 *   Created Date  : 2020-11-12                                             *
-*   Last Modified : 2026-06-28                                             *
+*   Last Modified : 2026-07-13                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -96,46 +96,42 @@ ResizeMobBar.stage = function(patchName)
 {
 	const _ = `${patchName}.stage : `;
 
-	if (MBAR.Mode === 3)
-		return this.stageDirect(patchName);
-
 	$$(_, 1.1, `Construct our code`)
 	const cacheKey = 'MBAR';
 	const [
-		[normW, normH],
-		[miniBossW, miniBossH],
-		[bossW, bossH]
+		[normWRaw, normHRaw],
+		[miniBossWRaw, miniBossHRaw],
+		[bossWRaw, bossHRaw]
 	] = this.Members.map(name => CACHE.entry(cacheKey, name));
+	const [normW, normH, miniBossW, miniBossH, bossW, bossH] =
+		[normWRaw, normHRaw, miniBossWRaw, miniBossHRaw, bossWRaw, bossHRaw].map(Number);
 
-	const bossBody =
-		PUSH(bossH)                     //push <bossHeight>
-	+	PUSH(bossW)                     //push <bossWidth>
-	+	MBAR.MovECX                     //mov ecx, regA
-	+	JMP(Filler(3));                 //jmp <retnAddr>
-	const miniBossBody =
-		PUSH(miniBossH)                 //push <miniBossHeight>
-	+	PUSH(miniBossW)                 //push <miniBossWidth>
-	+	MBAR.MovECX                     //mov ecx, regA
-	+	JMP(Filler(3));                 //jmp <retnAddr>
-	const normBody =
-		PUSH(normH)                     //push <normalHeight> ; _isNormal
-	+	PUSH(normW)                     //push <normalWidth>
-	+	MBAR.MovECX                     //mov ecx, regA
-	+	JMP(Filler(3));                 //jmp <retnAddr>
+	if (![normW, normH, miniBossW, miniBossH, bossW, bossH]
+		.every(value => Number.isInteger(value) && value >= 1 && value <= 0xFF))
+		throw Error(`${patchName}: invalid Mob HP Bar dimensions`);
 
 	const parts =
 	[//0
 		CMP(BYTE_PTR, MBAR.MobType, 2)  //cmp byte ptr [regC + mobType], 2  OR  cmp regC, 2
-	+	JNE(bossBody.byteCount())       //jne _checkMini
-	+	bossBody
+	+	JNE(Filler(1,1))                //jne _checkMini
+	+	PUSH(bossH)                     //push <bossHeight>
+	+	PUSH(bossW)                     //push <bossWidth>
+	+	MBAR.MovECX                     //preserve the overwritten setup instruction
+	+	JMP(Filler(3))                  //jmp <retnAddr>
 
 	,//1
 		CMP(BYTE_PTR, MBAR.MobType, 1)  //cmp byte ptr [regC + mobType], 1  OR  cmp regC, 1 ; _checkMini
-	+	JNE(miniBossBody.byteCount())   //jne _isNormal
-	+	miniBossBody
+	+	JNE(Filler(2,1))                //jne _isNormal
+	+	PUSH(miniBossH)                 //push <miniBossHeight>
+	+	PUSH(miniBossW)                 //push <miniBossWidth>
+	+	MBAR.MovECX                     //preserve the overwritten setup instruction
+	+	JMP(Filler(3))                  //jmp <retnAddr>
 
 	,//2
-		normBody
+		PUSH(normH)                     //push <normalHeight> ; _isNormal
+	+	PUSH(normW)                     //push <normalWidth>
+	+	MBAR.MovECX                     //preserve the overwritten setup instruction
+	+	JMP(Filler(3))                  //jmp <retnAddr>
 	];
 
 	$$(_, 1.2, `Activate the tag`)
@@ -145,9 +141,12 @@ ResizeMobBar.stage = function(patchName)
 	const [free, freeVir] = CACHE.allocate(cacheKey, 'TblBuilder', parts, 0x10);
 
 	$$(_, 2.2, `Fill in the blanks`)
+	const [,_checkMini, _isNormal] = MapAddrs(freeVir, parts);
 	const code = SetFillTargets(parts,
 	{
 		start : freeVir,
+		'1,1' : _checkMini,
+		'2,1' : _isNormal,
 		 3    : MBAR.RetnAddr
 	});
 
@@ -156,54 +155,6 @@ ResizeMobBar.stage = function(patchName)
 
 	$$(_, 2.4, `Setup a JMP to it at hook address`)
 	Exe.SetJMP(MBAR.HookAddr, freeVir, MBAR.OvrdSize - 5); //NOPs at the end to keep it clean.
-};
-
-///
-/// \brief Helper function to stage split HP bar sites used by newer clients.
-///
-ResizeMobBar.stageDirect = function(patchName)
-{
-	const _ = `${patchName}.stageDirect : `;
-
-	const push32 = val =>
-		" 68" + val.toHex(4);
-
-	$$(_, 1.1, `Construct direct site code`)
-	const cacheKey = 'MBAR';
-	const sizes = new Map(this.Members.map(name => [name, CACHE.entry(cacheKey, name)]));
-
-	$$(_, 1.2, `Activate the tag`)
-	Exe.BeginTag(CACHE.getTag(cacheKey));
-
-	for (const name of this.Members)
-	{
-		const site = MBAR.DirectSites.get(name);
-		const [wid, hgt] = sizes.get(name);
-
-		const parts =
-		[
-			site.Prefix                    //preserve original ecx assignment
-		+	push32(hgt)                    //push <height>
-		+	push32(wid)                    //push <width>
-		+	JMP(Filler(1))                 //jmp <retnAddr>
-		];
-
-		$$(_, 2.1, `Allocate direct site code for ${name}`)
-		const [free, freeVir] = CACHE.allocate(cacheKey, `Direct_${name}`, parts[0], 0x10);
-
-		$$(_, 2.2, `Fill direct site code for ${name}`)
-		const code = SetFillTargets(parts,
-		{
-			start : freeVir,
-			 1    : site.RetnAddr
-		});
-
-		$$(_, 2.3, `Add direct site code for ${name}`)
-		Exe.SetHex(free, code);
-
-		$$(_, 2.4, `Setup direct site JMP for ${name}`)
-		Exe.SetJMP(site.HookAddr, freeVir, site.OvrdSize - 5);
-	}
 };
 
 ///
