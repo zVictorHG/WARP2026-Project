@@ -52,7 +52,7 @@ CustomNW:
         
         - NoLoginOTP:
             title : Disable OTP login packet
-            recommend : no
+            recommend : yes
             author : CH.C (jchcc)
             desc : Disable OTP Login Packet, which causes connection issue after disconnect.
             
