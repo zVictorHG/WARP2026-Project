@@ -20,9 +20,9 @@
 #                                                                          #
 ############################################################################
 #                                                                          #
-#   Author(s)     : Neo-Mind                                               #
+#   Author(s)     : Neo-Mind, Victor Hugo                                  #
 #   Created Date  : 2020-08-26                                             #
-#   Last Modified : 2022-09-24                                             #
+#   Last Modified : 2026-07-13                                             #
 #                                                                          #
 ############################################################################
 
@@ -64,8 +64,8 @@ CharCreation:
         - IncrNewCharHairs:
             title : Increase char create Hair limits
             recommend : no
-            author : Neo-Mind
-            desc : Increase the Hair Style and Color limits used in Make Character Window to user specified values.
+            author : Neo-Mind, CrazyBebop, Victor Hugo
+            desc : Raises hairstyle and hair-color limits by routing modern character creation through the retained native scrollbar-backed window.
         
         - CustomCharCreateId:
             title : Customize job id in char create dialog

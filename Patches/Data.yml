@@ -22,7 +22,7 @@
 #                                                                          #
 #   Author(s)     : Neo-Mind, Victor Hugo                                  #
 #   Created Date  : 2020-08-26                                             #
-#   Last Modified : 2026-06-14                                             #
+#   Last Modified : 2026-07-08                                             #
 #                                                                          #
 ############################################################################
 
@@ -164,6 +164,12 @@ CustomData:
             recommend : yes
             author : Andrei Karas (4144)
             desc : Hide the actual build info in client by 'NULL' ifying all related values.
+        
+        - CustomLoadedDate:
+            title : Customize WARP loaded date
+            recommend : no
+            author : Victor Hugo
+            desc : Changes the PE timestamp used by WARP as the loaded executable date.
          
         - NoCameraLock:
             title : Disable camera lock
