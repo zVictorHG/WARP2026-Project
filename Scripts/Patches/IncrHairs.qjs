@@ -252,8 +252,11 @@ IncrHairs.stage1 = patchName =>
 		if (addr < 0 && !isLast)
 			throw Error("Limit checker missing");
 
-		$$(__, 4.8, `Fix the CMP`)
-		fixCmp(addr + 2);
+		$$(__, 4.8, `Fix the CMP when this resource path has a limiter`)
+		// The palette path is allowed to have no limiter. In that case addr is
+		// -1 and passing addr + 2 to fixCmp writes into the DOS header (offset 1).
+		if (addr >= 0)
+			fixCmp(addr + 2);
 
 		$$(__, 4.9, `Repeat when doram specific section is present (only for the spr & act)`)
 		if (idx === 0 && doramOn)
