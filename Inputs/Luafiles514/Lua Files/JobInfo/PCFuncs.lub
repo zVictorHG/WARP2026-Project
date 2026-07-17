@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2021-03-21                                             *
-*   Last Modified : 2021-10-03                                             *
+*   Last Modified : 2026-07-17                                             *
 *                                                                          *
 ****************************************************************************
 ]]--
@@ -101,7 +101,7 @@ ReqPCHandPath = function(jobid, lt)
 end
 
 ReqPCJobName = function(jobid, lt)
-	return GetValFromTbl(PCNames, jobid, lt, false, true)
+	return GetValFromTbl(PCNames, jobid, lt)
 end
 
 --[[
@@ -176,7 +176,7 @@ GetPCNameOvrd = function(jobid, gender, lt)
 		jobid = MapPCJobName(jobid, lt)
 		if jobid >= 0
 		then
-			GetPCNameOvrd(jobid, gender, lt)
+			return GetPCNameOvrd(jobid, gender, lt)
 		end
 	end
 

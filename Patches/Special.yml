@@ -20,9 +20,9 @@
 #                                                                          #
 ############################################################################
 #                                                                          #
-#   Author(s)     : Neo-Mind                                               #
+#   Author(s)     : Neo-Mind, Victor Hugo                                  #
 #   Created Date  : 2020-08-26                                             #
-#   Last Modified : 2022-09-30                                             #
+#   Last Modified : 2026-07-17                                             #
 #                                                                          #
 ############################################################################
 
@@ -32,6 +32,12 @@ CustomSpecials:
     color : deeppink
     
     patches:
+        - CustomJobs:
+            title : Enable Custom Jobs [Experimental]
+            recommend : no
+            author : Neo-Mind, Victor Hugo
+            desc : Enables the use of Custom Jobs using the supporting Lua Files package.
+
         - CustomHomuns:
             title : Enable Custom Homunculi
             recommend : no

@@ -20,9 +20,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2021-03-19                                             *
-*   Last Modified : 2023-08-26                                             *
+*   Last Modified : 2026-07-17                                             *
 *                                                                          *
 \**************************************************************************/
 
@@ -44,6 +44,8 @@ CustomJobs = function(_)
 	if (!CACHE.has('CJ_Infos'))
 	{
 		let refs = [];
+		let dynamicHandHook = -1;
+		let dynamicNameHook = -1;
 
 		$$(_, 1.2, `Find the spr/act path suffix for Santa costume`)
 		let strAddr = Exe.FindText("\xBB\xEA\xC5\xB8");
@@ -120,15 +122,41 @@ CustomJobs = function(_)
 		$$(_, 1.8, `Find the hand prefix for Archer`)
 		strAddr = Exe.FindText("\xB1\xC3\xBC\xF6\\\xB1\xC3\xBC\xF6"); // ±Ã¼ö\±Ã¼ö for Archer
 		if (strAddr < 0)
-			throw Error("Hand prefix missing");
+		{
+			$$(_, 1.9, `Locate the modern dynamically-built hand table by its allocator and semantic end marker`)
+			const allocCode =
+				MOV(ECX, ESI)
+			+	LEA(EAX, [EBP, WCn])
+			+	PUSH_EAX
+			+	PUSH(POS4WC)
+			+	CALL(ALLWC)
+			;
+			const allocAddr = Exe.FindHex(allocCode, refs[1], refs[2]);
+			if (allocAddr < 0)
+				throw Error("Dynamic hand table allocator missing");
 
-		$$(_, 1.9, `Find it's reference`)
+			// ESI still points at the hand table immediately before it is reused for
+			// the next object. Append custom entries there without replacing the
+			// protected/decrypted official table initialization.
+			dynamicHandHook = Exe.FindLastHex(MOV(ESI, [EDI, POS2WC]), refs[2], allocAddr);
+			if (dynamicHandHook < 0)
+				throw Error("Dynamic hand table end missing");
+
+			refs[3] = null;
+		}
+
+		if (strAddr >= 0)
+		{
+			$$(_, 1.9, `Find it's reference`)
 		refs[3] = Exe.FindHex(MOV([R32, 0xC], strAddr)); //mov dword ptr [regA + 0Ch], offset "±Ã¼ö\±Ã¼ö"
-		if (refs[3] < 0)
-			throw Error("Hand reference missing");
+			if (refs[3] < 0)
+				throw Error("Hand reference missing");
+		}
 
 		$$(_, 1.10, `Find the string 'Acolyte'`)
 		strAddr = Exe.FindText("Acolyte"); //We use Acolyte here because Archer has a ( mov ecx, offset ) instruction before it in Older clients
+		if (strAddr < 0)
+			strAddr = Exe.FindText("ACOLYTE"); //modern table uses uppercase resource identifiers
 		if (strAddr < 0)
 			throw Error("Acolyte is missing");
 
@@ -137,6 +165,23 @@ CustomJobs = function(_)
 		if (refs[4] < 0)
 			throw Error("Acolyte reference missing");
 
+		if (Exe.BuildDate >= 20260100)
+		{
+			$$(_, 1.12, `Locate the modern PCJobName epilogue so custom reduced indices can be appended without replacing official entries`)
+			const nameEndCode =
+				POP(ESI)
+			+	MOV([EAX, POS2WC], POS4WC)
+			+	MOV(ESP, EBP)
+			+	POP(EBP)
+			+	RETN()
+			;
+			dynamicNameHook = Exe.FindHex(nameEndCode, refs[4], refs[4] + 0x1000);
+			if (dynamicNameHook < 0)
+				throw Error("Dynamic PCJobName epilogue missing");
+
+			refs[4] = null;
+		}
+
 		//==========================================================================================//
 		// Find the hook & end address for table loading & extract all non-related codes in between //
 		//==========================================================================================//
@@ -144,7 +189,15 @@ CustomJobs = function(_)
 		$$(_, 2.1, `Ensure LANGTYPE is loaded . Needed by FetchTillEnd`)
 		LANGTYPE.load();
 
-		let limits = Exe.BuildDate >= 20170700
+		let limits = Exe.BuildDate >= 20260100
+		? [
+			0x6D95,
+			0x6D95,
+			0x6D95,
+			0x6D95,
+			0x1109
+		]
+		: Exe.BuildDate >= 20170700
 		? [
 			0x6D93,
 			0x6D93,
@@ -164,11 +217,14 @@ CustomJobs = function(_)
 		let fetcher = -1;
 		const infos = refs.map( (addr, idx) =>
 		{
+			if (addr == null)
+				return null;
+
 			$$(_, 2.2, `Prep variables for required info`)
 			let hookAddr, movIns, baseReg, format; //baseReg contains address for index 0 of the table, movIns will contain the mov to baseReg
 
 			$$(_, 2.3, `Find the limit usage before it`)
-			const limitAddr = Exe.FindLastHex(limits[idx].toHex(), addr, addr - 0x800);
+			const limitAddr = Exe.FindLastHex(limits[idx].toHex(), addr, addr - (Exe.BuildDate >= 20260100 ? 0x1000 : 0x800));
 			if (limitAddr < 0)
 				throw Error(`Limit missing for no.${idx + 1}`);
 
@@ -208,11 +264,12 @@ CustomJobs = function(_)
 
 				$$(_, 2.11, `Use it to construct the table assignment pattern & look for it after the limitAddr`)
 				const prefix = MOV(R32, ins.Disp ? [srcReg, ins.Disp] : [srcReg]);
+				const firstAssignEnd = Exe.BuildDate >= 20260100 ? addr + 1 : limitAddr + 0x60;
 				const addrs = [
-					...Exe.FindHexN(1, prefix + MOV([R32], POS3WC), limitAddr + 4, limitAddr + 0x60),        //mov dword ptr [regA], offset#1
-					...Exe.FindHexN(1, prefix + MOV([R32, WCp], POS3WC), limitAddr + 4, limitAddr + 0x60),   //mov dword ptr [regA + disp8], offset#1
-					...Exe.FindHexN(1, prefix + MOV([R32, POS2WC], POS3WC), limitAddr + 4, limitAddr + 0x60) //mov dword ptr [regA + disp32], offset#1
-				].sort();
+					Exe.FindHex(prefix + MOV([R32], POS4WC), limitAddr + 4, firstAssignEnd),        //mov dword ptr [regA], offset#1
+					Exe.FindHex(prefix + MOV([R32, WCp], POS4WC), limitAddr + 4, firstAssignEnd),   //mov dword ptr [regA + disp8], offset#1
+					Exe.FindHex(prefix + MOV([R32, POS2WC], POS4WC), limitAddr + 4, firstAssignEnd) //mov dword ptr [regA + disp32], offset#1
+				].filter(addr => addr >= 0).sort((a, b) => a - b);
 
 				if (addrs.isEmpty())
 					throw Error(`Starting index assignment missing for no.${idx + 1}`);
@@ -303,6 +360,8 @@ CustomJobs = function(_)
 		});
 
 		CACHE.put('CJ_Infos', infos);
+		CACHE.put('CJ_DynamicHandHook', dynamicHandHook);
+		CACHE.put('CJ_DynamicNameHook', dynamicNameHook);
 	}
 
 	$$(_, 4.1, `Get the new max limit from user`)
@@ -341,6 +400,8 @@ CustomJobs = function(_)
 
 	$$(_, 4.3, `Get the stored infos`)
 	const infos = CACHE.get('CJ_Infos');
+	const dynamicHandHook = CACHE.get('CJ_DynamicHandHook');
+	const dynamicNameHook = CACHE.get('CJ_DynamicNameHook');
 
 	//=======================================//
 	// Add Table Loaders using LUA functions //
@@ -360,9 +421,13 @@ CustomJobs = function(_)
 	].forEach( (fnSuffix, index) =>
 	{
 		$$(_, 5.2, `Setup the limits for ${fnSuffix}`)
-		const reductor = (index === 4) ? 0 : 3950;
-		const limits =
-		[
+		const reductor = (index === 4 && infos[index] != null) ? 0 : 3950;
+		const customEnd = MaxJob - reductor;
+		const limits = Exe.BuildDate >= 20260100
+		? [
+			[0xFA1 - reductor, customEnd]
+		]
+		: [
 			[0, 0x2C],
 			[0xFA1 - reductor, MaxJob - reductor]
 		];
@@ -376,8 +441,81 @@ CustomJobs = function(_)
 		:
 			[["Map" + fnSuffix, MapFuncs[index]], "dd>d", EDI, [LANGTYPE], EAX]
 		,
-			[ESP, 0x24]
+			[ESP, 0x24],
+			Exe.BuildDate >= 20260100
 		);
+
+		if (Exe.BuildDate >= 20260100)
+		{
+			$$(_, 5.4, `Append custom entries after the protected official table is initialized`)
+			let appendHook, tablePtr;
+			if (infos[index] == null)
+			{
+				appendHook = index === 3 ? dynamicHandHook : dynamicNameHook;
+				tablePtr = [ESI];
+			}
+			else
+			{
+				const [, baseReg, endIns] = infos[index];
+				appendHook = endIns.Addr;
+				tablePtr = baseReg;
+			}
+
+			const hookIns = Instr.FromAddr(appendHook);
+			const hookTargets = {};
+			let hookCode;
+			if (hookIns.Codes[0] === 0xE8)
+			{
+				hookCode = CALL(Filler(8));
+				hookTargets[8] = Exe.Phy2Vir(hookIns.NextAddr, CODE) + hookIns.Immd;
+			}
+			else
+			{
+				hookCode = hookIns.toString();
+			}
+			let resumeAddr = hookIns.NextAddr;
+			while (hookCode.byteCount() < 5)
+			{
+				const nextIns = Instr.FromAddr(resumeAddr);
+				hookCode += nextIns.toString();
+				resumeAddr = nextIns.NextAddr;
+			}
+			let parts =
+			[
+				PUSH(tablePtr) //push the address of index 0 in the current table
+			+	PUSHAD
+			];
+
+			for (const template of templates)
+			{
+				for (const [min, max] of limits)
+				{
+					parts.push(SwapFillers(template,
+					{
+						1 : min,
+						2 : max
+					}));
+				}
+			}
+
+			parts.push(
+				POPAD
+			+	ADD(ESP, 4)
+			+	hookCode
+			+	JMP(Filler(3))
+			);
+
+			AutoHook(appendHook, parts.join(''),
+			{
+				nops : hookCode.byteCount() - 5,
+				postProc : LUA.finalize,
+				procArgs : Object.assign(hookTargets,
+				{
+					3 : Exe.Phy2Vir(resumeAddr, CODE)
+				})
+			});
+			return;
+		}
 
 		$$(_, 5.4, `Retrieve the info for this index`)
 		const [hookAddr, baseReg, endIns, retainer] = infos[index];
@@ -450,6 +588,8 @@ CustomJobs = function(_)
 	//============================================================================//
     // Find Gender based Name assignment & Setup extra table assignment for names //
     //============================================================================//
+	if (Exe.BuildDate < 20260100)
+	{
 
 	limits =
 	[
@@ -458,7 +598,7 @@ CustomJobs = function(_)
 	];
 
 	$$(_, 6.1, `Find the string 'TaeKwon Girl'`)
-	const tgAddr = Exe.FindText("TaeKwon Girl");
+	let tgAddr = Exe.FindText("TaeKwon Girl");
 	if (tgAddr < 0)
 		throw Error("'TaeKwon Girl' not found");
 
@@ -528,7 +668,7 @@ CustomJobs = function(_)
 		{
 			code =
 				CMP([LANGTYPE], 0)     //cmp dword ptr [g_serviceType], 0
-			+	MOV(ECX, POS3WC)       //mov ecx, offset#1
+			+	MOV(ECX, POS4WC)       //mov ecx, offset#1
 			+	JNE(WCp)               //jne short _skip
 			;
 		}
@@ -538,7 +678,7 @@ CustomJobs = function(_)
 				MOV(EAX, [LANGTYPE])   //mov eax, dword ptr [g_serviceType]
 			+	(Exe.Version === 6
 			?
-				MOV(ECX, POS3WC)       //mov ecx, offset#1
+				MOV(ECX, POS4WC)       //mov ecx, offset#1
 			:
 				''
 			)
@@ -867,6 +1007,8 @@ CustomJobs = function(_)
 		Exe.SetHex(hookAddr, code);
 	}
 
+	}
+
 	//============================//
     // Special Mod 1 : Cash Mount //
     //============================//
@@ -1168,8 +1310,9 @@ CustomJobs.validate = IsPost2010;
 CustomJobs.onApplied = function()
 {
 	const _ = 'CustomJobs.onApplied';
+	const copyLua = Exe.GetSavedInput('$copyCJLub');
 
-	if (!Warp.TestMode && Exe.GetSavedInput('$copyCJLub'))
+	if (!Warp.TestMode && (copyLua === true || copyLua === "true"))
 	{
 		$$(_, 1.1, `Prepare the directory paths`)
 		const suffix = "/Luafiles514/Lua Files/JobInfo";
@@ -1196,7 +1339,7 @@ CustomJobs.onApplied = function()
 			"PCNames",
 			"PCFuncs"
 		])
-			System.Copy(srcDir + "/" + prefix + ".lub", tgtDir);
+			System.Copy(srcDir + "/" + prefix + ".lub", tgtDir, true);
 	}
 };
 
@@ -1210,7 +1353,11 @@ CustomJobs.overwrite = (oldStr, newStr) =>
 	$$(_, 1, `Find the old string '${oldStr}'`)
 	const addr = Exe.FindText(oldStr, PHYSICAL);
 	if (addr < 0)
-		throw Error(`${oldStr} not found`);
+	{
+		$$(_, 1.1, `The legacy spare string is absent; allocate the Lua function name in the diff section`)
+		const [, virAddr] = Exe.AddText(newStr);
+		return virAddr;
+	}
 
 	$$(_, 2, `Replace with the new one`)
 	Exe.SetText(addr, newStr  + "\x00");
@@ -1222,7 +1369,7 @@ CustomJobs.overwrite = (oldStr, newStr) =>
 ///
 /// \brief Helper function to generate the templates for Req/Get function & Map function
 ///
-CustomJobs.generate = (firstSet, secondSet, memPtr) =>
+CustomJobs.generate = (firstSet, secondSet, memPtr, preserveExisting = false) =>
 {
 	const _ = 'CustomJobs.generate';
 
@@ -1232,9 +1379,13 @@ CustomJobs.generate = (firstSet, secondSet, memPtr) =>
 	+	MOV(EBX, Filler(2))      //mov ebx, endingValue
 	;
 
-	const cmnSuf =
+	const assignment =
 		(memPtr.length > 1 ? NOP2 : '') //add extra NOPs to accomodate for [esp + 24h] mem location
 	+	MOV([4, EDI, ECX], EAX)  //mov dword ptr [edi*4 + ecx], eax
+	;
+
+	const cmnSuf =
+		assignment
 	+	INC(EDI)                 //inc edi ; _idxInc
 	+	CMP(EDI, EBX)            //cmp edi, ebx
 	;
@@ -1255,7 +1406,7 @@ CustomJobs.generate = (firstSet, secondSet, memPtr) =>
 		+	prep                      //Stack Prep
 		;
 
-		const infix =
+		const body =
 			main                     //LUA caller code
 		+	(idx === 0
 
@@ -1271,6 +1422,18 @@ CustomJobs.generate = (firstSet, secondSet, memPtr) =>
 		+	MOV(ECX, memPtr)          //mov ecx, dword ptr [memPtr] ;
 		+	MOV(EAX, [4, EAX, ECX])   //mov eax, dword ptr [eax*4 + ecx]
 		)
+		;
+
+		const occupiedCheck = preserveExisting
+		?	MOV(ECX, memPtr)          //preserve protected/native entries already initialized by the client
+		+	CMP([4, EDI, ECX], 0)
+		+	JNZ(body.byteCount() + assignment.byteCount())
+		:	''
+		;
+
+		const infix =
+			occupiedCheck
+		+	body
 		+	cmnSuf                    //table assignment, EDI increment & comparison for loop
 		;
 

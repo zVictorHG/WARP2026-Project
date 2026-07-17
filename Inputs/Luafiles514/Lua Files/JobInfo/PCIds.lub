@@ -21,9 +21,9 @@
 *                                                                          *
 |**************************************************************************|
 *                                                                          *
-*   Author(s)     : Neo-Mind                                               *
+*   Author(s)     : Neo-Mind, Victor Hugo                                  *
 *   Created Date  : 2021-03-21                                             *
-*   Last Modified : 2022-08-23                                             *
+*   Last Modified : 2026-07-17                                             *
 *                                                                          *
 ****************************************************************************
 ]]--
@@ -38,7 +38,7 @@
 
 PCIds =
 {
-	--IDs need to be within 0 - 44 or 4001 - 4400
+	--IDs need to be within 0 - 44 or 4001 - 5000
 
 	-----------------
 	-- 1st Classes --
@@ -336,7 +336,7 @@ PCIds =
 
 PCMounts =
 {
-	--IDs need to be within 0 - 44 or 4001 - 4400 and not already used as a job id
+	--IDs need to be within 0 - 44 or 4001 - 5000 and not already used as a job id
 
 	-----------------
 	-- 1st Classes --
