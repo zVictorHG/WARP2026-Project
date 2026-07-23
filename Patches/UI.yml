@@ -22,7 +22,7 @@
 #                                                                          #
 #   Author(s)     : Neo-Mind, Victor Hugo, Skylove                         #
 #   Created Date  : 2020-08-26                                             #
-#   Last Modified : 2026-07-19                                             #
+#   Last Modified : 2026-07-22                                             #
 #                                                                          #
 ############################################################################
 
@@ -32,6 +32,18 @@ CustomUI:
     color : orangered
     
     patches:
+        - KeepJobExpBarVisible:
+            title : Keep Job EXP Bar Visible at Max Job Level
+            recommend : no
+            author : Victor Hugo
+            desc : Keeps the Job EXP bar visible when a character reaches the configured maximum Job Level.
+
+        - EquipPropTextTabs2026:
+            title : Enable RO LATAM Equipment Property Tabs
+            recommend : no
+            author : Victor Hugo
+            desc : Uses translated tab names from MsgStringTable and faithfully reproduces the RO LATAM tab proportions, spacing, native font, and complete window layout.
+
         - LoadGRFOnSlashCmd:
             title : Load GRF on slash command
             recommend : no

@@ -1,0 +1,264 @@
+/**************************************************************************\
+*                                                                          *
+*   Author(s)     : Victor Hugo                                            *
+*   Created Date  : 2026-04-19                                             *
+*   Last Modified : 2026-07-23                                             *
+*                                                                          *
+\**************************************************************************/
+
+///
+/// \brief Replaces the eight hardcoded Equipment Properties labels with
+///        MSI_EQUIPMENT_PROPERTIES_TAB0..7 and reproduces the complete
+///        RO LATAM 21x40 vertical-tab geometry with native Gulim 12 text.
+///
+
+const EquipPropTextTabs2026Build =
+{
+	name              : "2026-01-07_Ragexe_1767686776",
+	timeDateStamp     : 0x695CB11E,
+	minimumFileSize   : 16499200,
+	tabVtableVir      : 0x01147C48,
+	innerVtableVir    : 0x01147D2C,
+	setSizeVir        : 0x005C8030,
+	tabSizeSites      :
+	[
+		0x6093C4, 0x60967F, 0x60992F, 0x609BDF,
+		0x609E8F, 0x60A14F, 0x60A40F, 0x60A6CF
+	],
+	tabPositionSites  :
+	[
+		0x6093D1, 0x60968C, 0x60993C, 0x609BEC,
+		0x609E9C, 0x60A15C, 0x60A41C, 0x60A6DC
+	],
+	outerSize         : 0x607163,
+	panelHeight       : 0x608830,
+	tabStackHeight    : 0x608845,
+	tabStackWidth     : 0x60884F,
+	sidebarMaskHeight : 0x608C8B,
+	innerContainer    : 0x6092B4,
+	resizeCluster     : 0x60AC29
+};
+
+const EquipPropTextTabs2026Hex = (addr, length) =>
+	(Exe.GetHex(addr, length) || "").replace(/\s+/g, "").toUpperCase();
+
+const EquipPropTextTabs2026IsNativeBuild = () =>
+{
+	try
+	{
+		const build = EquipPropTextTabs2026Build;
+		const pe = Exe.GetUint32(0x3C);
+		if (Exe.GetUint32(pe) !== 0x00004550
+		 || Exe.GetUint32(pe + 8) !== build.timeDateStamp
+		 || Exe.FileSize < build.minimumFileSize)
+			return false;
+
+		const tabVtable = Exe.Vir2Phy(build.tabVtableVir);
+		const innerVtable = Exe.Vir2Phy(build.innerVtableVir);
+		if (Exe.GetUint32(tabVtable + 0xB4) !== build.setSizeVir
+		 || Exe.GetUint32(innerVtable + 0xB4) !== build.setSizeVir)
+			return false;
+
+		return build.tabSizeSites.every(
+			addr => EquipPropTextTabs2026Hex(addr, 4) === "6A226A12"
+		);
+	}
+	catch (error)
+	{
+		return false;
+	}
+};
+
+EquipPropTextTabs2026 = function(__)
+{
+	const _ = Log.dive('EquipPropTextTabs2026');
+	const build = EquipPropTextTabs2026Build;
+
+	if (!EquipPropTextTabs2026IsNativeBuild())
+		throw Error(`Unsupported executable layout for ${build.name}`);
+
+	const expectHex = (addr, expected, label) =>
+	{
+		const wanted = expected.replace(/\s+/g, "").toUpperCase();
+		const actual = EquipPropTextTabs2026Hex(addr, wanted.length / 2);
+		if (actual !== wanted)
+			throw Error(`${label}: expected ${wanted}, found ${actual} at ${addr.toHex()}`);
+	};
+
+	const patchHex = (addr, expected, replacement, label) =>
+	{
+		expectHex(addr, expected, label);
+		Exe.SetHex(addr, replacement);
+	};
+
+	const patchUint32 = (addr, expected, replacement, label) =>
+	{
+		const actual = Exe.GetUint32(addr);
+		if (actual !== expected)
+			throw Error(`${label}: expected ${expected}, found ${actual} at ${addr.toHex()}`);
+		Exe.SetUint32(addr, replacement);
+	};
+
+	const signedRel32 = value =>
+		value > 0x7FFFFFFF ? value - 0x100000000 : value;
+
+	const callTargetVir = callPhy =>
+	{
+		if (Exe.GetUint8(callPhy) !== 0xE8)
+			throw Error(`Expected CALL rel32 at ${callPhy.toHex()}`);
+		const targetPhy = callPhy + 5 + signedRel32(Exe.GetInt32(callPhy + 1));
+		return Exe.Phy2Vir(targetPhy, CODE);
+	};
+
+	const appendCall = (code, baseVir, targetVir) =>
+	{
+		const callVir = baseVir + code.byteCount();
+		return code + " E8" + ((targetVir - (callVir + 5)) >>> 0).toHex();
+	};
+
+	const labelPatEsi =
+		  "8B 86" + WC + WC + " 00 00 C7 45 E8" + ALLWC
+		+ " C6 45 EC" + WC
+		+ " A8 01 75" + WC
+		+ " 83 C8 01 89 86" + WC + WC + " 00 00"
+		+ " C7 45 FC" + WC + " 00 00 00"
+		+ " 0F 57 C0 66 0F 13 85 10 FF FF FF"
+		+ " 8B 95 14 FF FF FF 8B 8D 10 FF FF FF"
+		+ " C6 86" + WC + WC + " 00 00 01";
+
+	const labelPatEbx =
+		  "8B 83" + WC + WC + " 00 00 C7 45 E8" + ALLWC
+		+ " C6 45 EC" + WC
+		+ " A8 01 75" + WC
+		+ " 83 C8 01 89 83" + WC + WC + " 00 00"
+		+ " C7 45 FC" + WC + " 00 00 00"
+		+ " 0F 57 C0 66 0F 13 85 10 FF FF FF"
+		+ " 8B 95 14 FF FF FF 8B 8D 10 FF FF FF"
+		+ " C6 83" + WC + WC + " 00 00 01";
+
+	const findSeries = (patterns, count, label) =>
+	{
+		for (const pattern of patterns)
+		{
+			const addrs = Exe.FindHexN(pattern).sort((a, b) => a - b);
+			if (addrs.length === count)
+				return addrs;
+		}
+		const counts = patterns.map(pattern => Exe.FindHexN(pattern).length).join("/");
+		throw Error(`${label} matched ${counts} sites (expected ${count})`);
+	};
+
+	$$(_, '1.1 - Resolve the eight native label setup blocks')
+	const labelAddrs = findSeries(
+		[labelPatEsi, labelPatEbx],
+		8,
+		"EquipmentProperties label blocks"
+	);
+
+	const continuationCandidates = Exe.FindHexN(
+		WC + " 8D 4D D0 E8" + ALLWC + " C7 45 FC" + WC + " 00 00 00"
+	).filter(addr =>
+		Exe.GetUint8(addr) === 0x53
+		|| Exe.GetUint8(addr) === 0x56
+		|| Exe.GetUint8(addr) === 0x57
+	);
+	const labelContinuations = labelAddrs.map((addr, idx) =>
+	{
+		const matches = continuationCandidates.filter(
+			candidate => candidate > addr && candidate < addr + 0xD0
+		);
+		if (matches.length !== 1)
+			throw Error(`Tab ${idx + 1} label continuation matched ${matches.length} sites`);
+		return matches[0];
+	});
+
+	$$(_, '1.2 - Resolve GetMsgString')
+	const getMsgRefs = Exe.FindHexN("68 BD 0F 00 00 E8" + ALLWC);
+	if (getMsgRefs.length === 0)
+		throw Error("GetMsgString reference for MSI 0x0FBD was not found");
+	const getMsgStringVir = callTargetVir(getMsgRefs[0] + 5);
+	for (const ref of getMsgRefs)
+	{
+		if (callTargetVir(ref + 5) !== getMsgStringVir)
+			throw Error("MSI 0x0FBD references do not agree on GetMsgString");
+	}
+
+	$$(_, '2.1 - Replace hardcoded labels with MSI_EQUIPMENT_PROPERTIES_TAB0..7')
+	labelAddrs.forEach((addr, idx) =>
+	{
+		const blockVir = Exe.Phy2Vir(addr, CODE);
+		const continuationVir = Exe.Phy2Vir(labelContinuations[idx], CODE);
+		let code = "68" + (0x10A7 + idx).toHex(4);
+		code = appendCall(code, blockVir, getMsgStringVir);
+		code += " 83 C4 04";
+		const continuationPush = Exe.GetUint8(labelContinuations[idx]);
+		if (continuationPush === 0x53)
+			code += " 8B D8";                 // continuation expects EBX
+		else if (continuationPush === 0x56)
+			code += " 8B F0";                 // continuation expects ESI
+		else
+			code += " 8B F8";                 // continuation expects EDI
+		const jumpVir = blockVir + code.byteCount();
+		code += " E9" + ((continuationVir - (jumpVir + 5)) >>> 0).toHex();
+		Exe.SetHex(addr, code);
+	});
+
+	$$(_, '3.1 - Apply the native RO LATAM 21x40 tab geometry')
+	build.tabSizeSites.forEach((addr, idx) =>
+		patchHex(addr, "6A 22 6A 12", "6A 28 6A 15", `Tab ${idx + 1} size`)
+	);
+
+	const tabPositions =
+	[
+		["6A 00",          "6A 00"],
+		["6A 21",          "6A 27"],
+		["6A 42",          "6A 4E"],
+		["6A 63",          "6A 75"],
+		["68 84 00 00 00", "68 9C 00 00 00"],
+		["68 A5 00 00 00", "68 C3 00 00 00"],
+		["68 C6 00 00 00", "68 EA 00 00 00"],
+		["68 E7 00 00 00", "68 11 01 00 00"]
+	];
+	build.tabPositionSites.forEach((addr, idx) =>
+		patchHex(addr, tabPositions[idx][0], tabPositions[idx][1], `Tab ${idx + 1} position`)
+	);
+
+	$$(_, '3.2 - Resize every nested owner of the tab column')
+	patchUint32(build.outerSize + 1,         308, 356, "Outer window height");
+	patchUint32(build.panelHeight,           270, 318, "Panel viewport height");
+	patchUint32(build.tabStackHeight,        265, 313, "Tab stack height");
+	patchUint32(build.tabStackWidth,          18,  21, "Tab stack width");
+	patchUint32(build.sidebarMaskHeight,     270, 318, "Sidebar mask height");
+	patchHex(build.innerContainer,
+		"68 09 01 00 00 6A 12",
+		"68 39 01 00 00 6A 15",
+		"Inner tab container size");
+	patchUint32(build.resizeCluster + 16,    308, 356, "Minimum resize height");
+
+	return Log.rise(true);
+};
+
+EquipPropTextTabs2026.validate = function()
+{
+	return EquipPropTextTabs2026IsNativeBuild()
+	&& (Exe.FindHexN(
+		  "8B 86" + WC + WC + " 00 00 C7 45 E8" + ALLWC
+		+ " C6 45 EC" + WC
+		+ " A8 01 75" + WC
+		+ " 83 C8 01 89 86" + WC + WC + " 00 00"
+		+ " C7 45 FC" + WC + " 00 00 00"
+		+ " 0F 57 C0 66 0F 13 85 10 FF FF FF"
+		+ " 8B 95 14 FF FF FF 8B 8D 10 FF FF FF"
+		+ " C6 86" + WC + WC + " 00 00 01"
+	).length === 8
+	|| Exe.FindHexN(
+		  "8B 83" + WC + WC + " 00 00 C7 45 E8" + ALLWC
+		+ " C6 45 EC" + WC
+		+ " A8 01 75" + WC
+		+ " 83 C8 01 89 83" + WC + WC + " 00 00"
+		+ " C7 45 FC" + WC + " 00 00 00"
+		+ " 0F 57 C0 66 0F 13 85 10 FF FF FF"
+		+ " 8B 95 14 FF FF FF 8B 8D 10 FF FF FF"
+		+ " C6 83" + WC + WC + " 00 00 01"
+	).length === 8);
+};
