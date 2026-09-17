@@ -139,8 +139,8 @@ FixFontsCharset = function(_)
 	+	movIns
 	+	JMP(Filler(2)),
 
-		MOV(EDI, [LANGTYPE])
-	+	MOVZX(EAX, BYTE_PTR, [EDI, csTbl])
+		MOV(EAX, [LANGTYPE])
+	+	MOVZX(EAX, BYTE_PTR, [EAX, csTbl])
 	+	JMP(Filler(2))
 	];
 
